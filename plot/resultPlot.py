@@ -3,9 +3,11 @@ import numpy as np
 from motion.motionCalculator import MotionCalculator
 
 
-def array_to_precession_input(pre_array):
-    return np.concatenate((pre_array[0:3], [0, 0]), axis=0), pre_array[3:9].reshape(-1, 2), \
-           pre_array[9:15].reshape(-1, 2), np.concatenate((pre_array[15:18], [0, 0, 0, 0]), axis=0)
+def array_to_precession_input(pre_array, magnification):
+    return np.concatenate((pre_array[0:3], [0, 0]), axis=0) / magnification[0], \
+           pre_array[3:9].reshape(-1, 2) / magnification[1], \
+           pre_array[9:15].reshape(-1, 2) / magnification[2], \
+           np.concatenate((pre_array[15:18], [0, 0, 0, 0]), axis=0) / magnification[3]
 
 
 def draw_one_graph(y_data, pred_y_data, y_label, title):
@@ -22,11 +24,12 @@ def draw_one_graph(y_data, pred_y_data, y_label, title):
     plt.xlabel('x')
     plt.ylabel('y')
     plt.title(title)
+    plt.savefig(title + ".png")
     pass
 
 
 def plot_cnn_result(train_x, train_y, pred_y_for_train, test_x, test_y, pred_y_for_test, y_label,
-                    axis_range):
+                    axis_range, magnification):
     draw_one_graph(test_y[:, 0:3], pred_y_for_test[:, 0: 3], y_label[0:3], "loc")
     draw_one_graph(test_y[:, 3:9], pred_y_for_test[:, 3:9], y_label[3:9], "straightness")
     draw_one_graph(test_y[:, 9:15], pred_y_for_test[:, 9:15], y_label[9:15], "angle error")
@@ -62,6 +65,7 @@ def plot_cnn_result(train_x, train_y, pred_y_for_train, test_x, test_y, pred_y_f
     #     plt.plot(t, error_value[:, i], 'b', label='input')
     # plt.xlabel('t')
     # plt.ylabel('input')
+    idx = 1
 
     if train_x.shape[1] > 4:
         fig = plt.figure()
@@ -71,6 +75,8 @@ def plot_cnn_result(train_x, train_y, pred_y_for_train, test_x, test_y, pred_y_f
         ax.set_xlabel('X Label')
         ax.set_ylabel('Y Label')
         ax.set_zlabel('Z Label')
+        plt.savefig("result" + str(idx) + ".png")
+        idx += 1
         # for i in range(error_value.shape[-1]):
         #     plt.figure()
         #     plt.plot(t, error_value[:, i], 'b', label='input' + str(i))
@@ -80,31 +86,43 @@ def plot_cnn_result(train_x, train_y, pred_y_for_train, test_x, test_y, pred_y_f
     # 画综合误差
     calculator = MotionCalculator()
     calculator.setAxisRange(axis_range)
-    theory_pre = []
-    pred_pre = []
-    error_percent = []
+    theory_pre = np.zeros((4, test_x.shape[0]))
+    pred_pre = np.zeros((4, test_x.shape[0]))
+    error_percent = np.zeros((4, test_x.shape[0]))
+    label = ["pos_error", "x_error", "y_error", "z_error"]
+    label_percent = ["pos_error_percent", "x_error_percent", "y_error_percent", "z_error_percent"]
     for i in range(test_x.shape[0]):
-        pred_loc, pred_straightness, pred_angle, pred_vertical = array_to_precession_input(pred_y_for_test[i])
-        test_loc, test_straightness, test_angle, test_vertical = array_to_precession_input(test_y[i])
+        pred_loc, pred_straightness, pred_angle, pred_vertical = array_to_precession_input(pred_y_for_test[i],
+                                                                                           magnification)
+        test_loc, test_straightness, test_angle, test_vertical = array_to_precession_input(test_y[i], magnification)
         calculator.setPrecision(pLoc=pred_loc, straightness=pred_straightness, angleError=pred_angle,
                                 verticalPre=pred_vertical)
-        pre = calculator.calculate(test_x[i][4] * 10000.0, test_x[i][5] * 10000.0, test_x[i][6] * 10000.0, 0., 0.)
-        pred_pre.append(pre[0])
+        pre = calculator.calculate(test_x[i][4] / magnification[4], test_x[i][5] / magnification[4],
+                                   test_x[i][6] / magnification[4], 0., 0.)
+        for k in range(len(pre)):
+            pred_pre[k][i] = pre[k]
         calculator.setPrecision(pLoc=test_loc, straightness=test_straightness, angleError=test_angle,
                                 verticalPre=test_vertical)
-        actual = calculator.calculate(test_x[i][4] * 10000.0, test_x[i][5] * 10000.0, test_x[i][6] * 10000.0, 0., 0.)
-        theory_pre.append(actual[0])
-        error_percent.append((pre[0] - actual[0]) / actual[0] * 100)
-    plt.figure()
-    plt.plot(test_t, theory_pre, label="theory_pre", color="#FF0000")
-    plt.plot(test_t, pred_pre, '--', label='pred_pre', color="#FF0000")
-    plt.xlabel('t')
-    plt.ylabel('pos_error')
-    plt.legend()
+        actual = calculator.calculate(test_x[i][4] / magnification[4], test_x[i][5] / magnification[4],
+                                      test_x[i][6] / magnification[4], 0., 0.)
+        for k in range(len(actual)):
+            theory_pre[k][i] = actual[k]
+            error_percent[k][i] = (pre[k] - actual[k]) / actual[k] * 100
 
-    plt.figure()
-    plt.plot(test_t, error_percent, label="reference_percent", color="#FF0000")
-    plt.xlabel('t')
-    plt.ylabel('error_percent')
-    plt.legend()
-    plt.show()
+    for i in range(pred_pre.shape[0]):
+        plt.figure()
+        plt.plot(test_t, theory_pre[i], label="theory_pre", color="#FF0000")
+        plt.plot(test_t, pred_pre[i], '--', label='pred_pre', color="#FF0000")
+        plt.xlabel('t')
+        plt.ylabel(label[i])
+        plt.legend()
+        plt.savefig("result" + str(idx) + ".png")
+        idx += 1
+
+        plt.figure()
+        plt.plot(test_t, error_percent[i], label="reference_percent", color="#FF0000")
+        plt.xlabel('t')
+        plt.ylabel(label_percent[i])
+        plt.legend()
+        plt.savefig("result" + str(idx) + ".png")
+        idx += 1

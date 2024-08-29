@@ -12,10 +12,12 @@ def normalize_data(data):
 
 # 1维卷积神经网络训练模型
 if __name__ == '__main__':
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
     sample_len = 1
     # 各轴定位精度
     # precision = [0.1, 0.15, 0.2, 0.25, 0.3]
-    loc_pre = [0.12, 0.13, 0.22, 0, 0]
+    loc_pre = [0.12, 0.13, 0.11, 0, 0]
     # 直线度
     straightness = [[0.000005, 0.0000035], [0.0000024, 0.0000033], [0.0000022, 0.0000041]]
     # straightness = [[0, 0], [0, 0], [0, 0]]
@@ -26,6 +28,8 @@ if __name__ == '__main__':
     verticalPre = [0.00001, 0.00002, 0.00001, 0., 0., 0., 0.]
     # verticalPre = [0.0, 0.0, 0.0, 0., 0., 0., 0.]
     precision = [loc_pre, straightness, angleError, verticalPre]
+    # 精度放大倍率，行程缩小倍率
+    magnification = [1, 10000, 100000, 10000, 0.0001]
     # 各轴运动行程
     axis_range = [2000., 2000., 2000., 180., 180.]
     label = ["x", "y", "z", "S_XXY", "S_XXZ", "S_YYZ", "S_YYX", "S_ZZY", "S_ZZX", "A_XXY", "A_XXZ", "A_YYZ", "A_YYX",
@@ -38,8 +42,8 @@ if __name__ == '__main__':
     all_data_y = []
     # 生成各轴运动数据
     for i in range(len(route)):
-        tmp_x, tmp_y = motion.motionDataMoc.generateDataCNN(50, sample_len, precision, route=route[i],
-                                                            axis_range=axis_range)
+        tmp_x, tmp_y = motion.motionDataMoc.generateDataCNN(200, sample_len, precision, route=route[i],
+                                                            axis_range=axis_range, pre_magnification=magnification)
         all_data_x.append(tmp_x)
         all_data_y.append(tmp_y)
     # 各轴运动路径、末端误差数据，整理为一个输入
@@ -47,16 +51,16 @@ if __name__ == '__main__':
     # 各轴误差数据作为标签数据，整理为一个数组
     data_y = np.array(all_data_y).reshape(-1, len(all_data_y[0][0]))
     # 生成一个路径的测试数据
-    test_x, test_y = motion.motionDataMoc.generateDataCNN(50, sample_len, precision, route=[0.5, 1, 1],
-                                                          axis_range=axis_range)
+    test_x, test_y = motion.motionDataMoc.generateDataCNN(200, sample_len, precision, route=[0.5, 1, 1],
+                                                          axis_range=axis_range, pre_magnification=magnification)
     test_x = np.array(test_x)
     test_y = np.array(test_y)
     # 最大迭代次数
-    max_epochs = 50
+    max_epochs = 1000
     # 每批数据数量
     batch_size = 1
     # 学习率
-    learning_rate = 0.0005
+    learning_rate = 0.0001
     # 初始化模型
     model = PrecisionNN([data_x, data_y], max_epochs, batch_size, learning_rate, loss_thres=0.005)
     # 开始模型训练
@@ -64,20 +68,20 @@ if __name__ == '__main__':
     train_pred = []
     test_pred = []
     # 训练数据转为tensor对象
-    tensor_train_x = torch.tensor(data_x, dtype=torch.double).unsqueeze(1).unsqueeze(1)
+    tensor_train_x = torch.tensor(data_x, dtype=torch.double, device=device).unsqueeze(1).unsqueeze(1)
     # 测试数据转为tensor对象
-    tensor_test_x = torch.tensor(test_x, dtype=torch.double).unsqueeze(1).unsqueeze(1)
+    tensor_test_x = torch.tensor(test_x, dtype=torch.double, device=device).unsqueeze(1).unsqueeze(1)
     for i in range(tensor_train_x.shape[0]):
         # 预测训练数据
-        train_pred.append(model.model(tensor_train_x[i]).detach().numpy())
+        train_pred.append(model.model(tensor_train_x[i]).detach().cpu().numpy())
     for i in range(tensor_test_x.shape[0]):
         # 预测测试数据
-        test_pred.append(model.model(tensor_test_x[i]).detach().numpy())
+        test_pred.append(model.model(tensor_test_x[i]).detach().cpu().numpy())
     # 转为numpy对象
     train_pred = np.array(train_pred)
     test_pred = np.array(test_pred)
     # train_pred = model.model(tensor_train_x)
     # test_pred = model.model(tensor_test_x)
     # 画出图形
-    plot_cnn_result(data_x, data_y, train_pred, test_x, test_y, test_pred, label, axis_range)
+    plot_cnn_result(data_x, data_y, train_pred, test_x, test_y, test_pred, label, axis_range, magnification)
     print(len(data_x), len(data_y))

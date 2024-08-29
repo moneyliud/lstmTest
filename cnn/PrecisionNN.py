@@ -13,6 +13,8 @@ from random import random
 # 卷积神经网络模型训练代码
 class PrecisionNN:
     def __init__(self, data, epoch=-1, batch_size=1, lr=0.001, loss_thres=0.001, model_path=None, weight_path=None):
+        # 查询是否能使用gpu进行训练
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # 最大迭代次数
         self.epoch = epoch
         # 损失值阈值，达到该阈值停止计算
@@ -22,19 +24,17 @@ class PrecisionNN:
         # 输出层参数个数
         self.output_size = data[1].shape[1]
         # 输入数据
-        self.data_x = torch.tensor(data[0], dtype=torch.double).unsqueeze(1).unsqueeze(1)
+        self.data_x = torch.tensor(data[0], dtype=torch.double, device=self.device).unsqueeze(1).unsqueeze(1)
         # 用于输出的判别数据
-        self.data_y = torch.tensor(data[1], dtype=torch.double).unsqueeze(1).unsqueeze(1)
+        self.data_y = torch.tensor(data[1], dtype=torch.double, device=self.device).unsqueeze(1).unsqueeze(1)
         # 数据长度
         self.total_len = len(self.data_x)
         # 训练的批次大小
         self.batch_size = min(batch_size, self.total_len)
         torch.set_default_tensor_type(torch.DoubleTensor)
-        # 查询是否能使用gpu进行训练
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if model_path is not None and weight_path is not None:
             model = torch.load(model_path)
-            model.load_state_dict(torch.load(weight_path))
+            model.load_state_dict(torch.load(weight_path), device=self.device)
             # params = model.named_parameters()
             # for name, layer in params:
             #     if not name.find("last_layer"):
@@ -43,10 +43,7 @@ class PrecisionNN:
             self.model = model
         else:
             self.model = PrecisionModel(self.input_size, self.output_size, batch_size)
-        if device.type != "cpu":
-            self.data_x = self.data_x.to(device)
-            self.data_y = self.data_y.to(device)
-            self.model = self.model.to(device)
+        self.model = self.model.to(self.device)
         self.model.double()
         # 学习率
         self.lr = lr
@@ -85,7 +82,7 @@ class PrecisionNN:
                 # 批次结束位置
                 end = (i + 1) * self.batch_size if (i + 1) * self.batch_size < self.total_len else self.total_len
                 # 损失值初始为0
-                tmploss = torch.zeros(1)
+                tmploss = torch.zeros(1, device=self.device)
                 for j in range(start, end):
                     batch_data = batch_x[j]
                     # 使用模型进行预测

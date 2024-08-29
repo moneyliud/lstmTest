@@ -5,7 +5,7 @@ import torch.nn as nn
 # 精度辨识卷积神经网络模型
 class PrecisionModel(nn.Module):
     k = 0
-    max_channel = 48
+    max_channel = 64
 
     def __init__(self, input_size, output_size, batch_size):
         super(PrecisionModel, self).__init__()

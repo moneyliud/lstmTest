@@ -37,13 +37,13 @@ def generateDataLSTM(data_len, sample_len, presicion, next_step=0, route=None):
 
 
 # 生成CNN所需训练数据
-def generateDataCNN(data_len, sample_len, presicion, next_step=0, route=None, axis_range=None):
-    data_x, data_y = generateData(data_len, sample_len, presicion, next_step, route, axis_range)
+def generateDataCNN(data_len, sample_len, presicion, next_step=0, route=None, axis_range=None, pre_magnification=None):
+    data_x, data_y = generateData(data_len, sample_len, presicion, next_step, route, axis_range, pre_magnification)
     return data_x, data_y
 
 
 # 生成训练数据集，参数：[数据长度，lstm采样长度，设备精度数组，预测的下一组数据跳过的步数，机床运行路径]
-def generateData(data_len, sample_len, presicion, next_step=0, route=None, axis_range=None):
+def generateData(data_len, sample_len, presicion, next_step=0, route=None, axis_range=None, magnification=None):
     # 机床运动计算模型
     calculator = MotionCalculator()
     axisRange = axis_range
@@ -62,9 +62,9 @@ def generateData(data_len, sample_len, presicion, next_step=0, route=None, axis_
 
     for i in range(data_len + sample_len + next_step):
         # a = testFunc((i - 1) * math.pi / step)
-        in_loc = [locFunc1(i, loc_pre[0], a1=300, a2=500, thres=50),
-                  locFunc1(i, loc_pre[1], a1=400, a2=-500, thres=60),
-                  locFunc1(i, loc_pre[2], a1=500, a2=-300, thres=70), 0, 0]
+        in_loc = [locFunc1(i, loc_pre[0], a1=300, a2=500, thres=50, rate=0.0005),
+                  locFunc1(i, loc_pre[1], a1=400, a2=-500, thres=60, rate=0.0005),
+                  locFunc1(i, loc_pre[2], a1=500, a2=-300, thres=70, rate=0.0005), 0, 0]
         in_straightness = [[locFunc1(i, straightness[0][0], a1=300, a2=-340, thres=30, rate=0.0000002),
                             locFunc1(i, straightness[0][1], a1=400, a2=500, thres=80, rate=0.0000002)],
                            [locFunc1(i, straightness[1][0], a1=600, a2=-400, thres=50, rate=0.0000002),
@@ -93,10 +93,12 @@ def generateData(data_len, sample_len, presicion, next_step=0, route=None, axis_
             z *= route[2]
         error, m1, m2, m3 = calculator.calculate(x, y, z, 0., 0.)
         # tmp_data_x.append([error, m1, m2, m3, x, y, z])
-        tmp_data_x.append([error, m1, m2, m3, x / 10000.0, y / 10000.0, z / 10000.0])
+        tmp_data_x.append([error, m1, m2, m3, x * magnification[4], y * magnification[4], z * magnification[4]])
         target = np.concatenate(
-            (np.array(in_loc)[0:3], np.array(in_straightness).reshape(-1), np.array(in_angle_error).reshape(-1),
-             np.array(in_vertical_pre)[0:3]), 0, None)
+            (np.array(in_loc)[0:3] * magnification[0],
+             np.array(in_straightness).reshape(-1) * magnification[1],
+             np.array(in_angle_error).reshape(-1) * magnification[2],
+             np.array(in_vertical_pre)[0:3] * magnification[3]), 0, None)
         tmp_data1_y.append(target.tolist())
         # tmp_data1_y.append([input[0]])
     return tmp_data_x, tmp_data1_y
