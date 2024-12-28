@@ -37,13 +37,16 @@ def generateDataLSTM(data_len, sample_len, presicion, next_step=0, route=None):
 
 
 # 生成CNN所需训练数据
-def generateDataCNN(data_len, sample_len, presicion, next_step=0, route=None, axis_range=None, pre_magnification=None):
-    data_x, data_y = generateData(data_len, sample_len, presicion, next_step, route, axis_range, pre_magnification)
+def generateDataCNN(data_len, sample_len, presicion, next_step=0, route=None, axis_range=None, pre_magnification=None,
+                    points=None):
+    data_x, data_y = generateData(data_len, sample_len, presicion, next_step, route, axis_range, pre_magnification,
+                                  points)
     return data_x, data_y
 
 
 # 生成训练数据集，参数：[数据长度，lstm采样长度，设备精度数组，预测的下一组数据跳过的步数，机床运行路径]
-def generateData(data_len, sample_len, presicion, next_step=0, route=None, axis_range=None, magnification=None):
+def generateData(data_len, sample_len, presicion, next_step=0, route=None, axis_range=None, magnification=None,
+                 points=None):
     # 机床运动计算模型
     calculator = MotionCalculator()
     axisRange = axis_range
@@ -55,12 +58,14 @@ def generateData(data_len, sample_len, presicion, next_step=0, route=None, axis_
     # 角度偏差
     angle_error = presicion[2]
     # 垂直度偏差
-    vertical_pre = presicion[3]
+    # vertical_pre = presicion[3]
     tmp_data_x = []
     tmp_data1_y = []
-    interval = int(2000 / (data_len + sample_len + next_step))
-
-    for i in range(data_len + sample_len + next_step):
+    interval = 2000 / (data_len + sample_len + next_step)
+    total_len = data_len + sample_len + next_step
+    if points is not None:
+        total_len = len(points)
+    for i in range(total_len):
         # a = testFunc((i - 1) * math.pi / step)
         in_loc = [locFunc1(i, loc_pre[0], a1=300, a2=500, thres=50, rate=0.0005),
                   locFunc1(i, loc_pre[1], a1=400, a2=-500, thres=60, rate=0.0005),
@@ -72,33 +77,42 @@ def generateData(data_len, sample_len, presicion, next_step=0, route=None, axis_
                            [locFunc1(i, straightness[2][0], a1=890, a2=300, thres=50, rate=0.0000002),
                             locFunc1(i, straightness[2][1], a1=360, a2=500, thres=40, rate=0.0000002)]]
         in_angle_error = [[locFunc1(i, angle_error[0][0], a1=300, a2=-340, thres=60, rate=0.0000002),
-                           locFunc1(i, angle_error[0][1], a1=400, a2=500, thres=70, rate=0.0000002)],
+                           locFunc1(i, angle_error[0][1], a1=400, a2=500, thres=70, rate=0.0000002),
+                           locFunc1(i, angle_error[0][1], a1=200, a2=400, thres=30, rate=0.0000002)],
                           [locFunc1(i, angle_error[1][0], a1=200, a2=-200, thres=120, rate=0.0000002),
-                           locFunc1(i, angle_error[1][1], a1=640, a2=-370, thres=33, rate=0.0000002)],
+                           locFunc1(i, angle_error[1][1], a1=640, a2=-370, thres=33, rate=0.0000002),
+                           locFunc1(i, angle_error[0][1], a1=500, a2=200, thres=60, rate=0.0000002)],
                           [locFunc1(i, angle_error[2][0], a1=790, a2=620, thres=55, rate=0.0000002),
-                           locFunc1(i, angle_error[2][1], a1=660, a2=340, thres=66, rate=0.0000002)]]
-        in_vertical_pre = [locFunc1(i, vertical_pre[0], a1=370, a2=300, thres=50, rate=0.000002),
-                           locFunc1(i, vertical_pre[1], a1=450, a2=300, thres=66, rate=0.000002),
-                           locFunc1(i, vertical_pre[2], a1=350, a2=500, thres=44, rate=0.000002), 0, 0, 0, 0]
+                           locFunc1(i, angle_error[2][1], a1=660, a2=340, thres=66, rate=0.0000002),
+                           locFunc1(i, angle_error[0][1], a1=440, a2=-150, thres=80, rate=0.0000002)]]
+        # in_vertical_pre = [locFunc1(i, vertical_pre[0], a1=370, a2=300, thres=50, rate=0.000002),
+        #                    locFunc1(i, vertical_pre[1], a1=450, a2=300, thres=66, rate=0.000002),
+        #                    locFunc1(i, vertical_pre[2], a1=350, a2=500, thres=44, rate=0.000002), 0, 0, 0, 0]
         # input = [locFunc(i, 0.05), 0.2, 0.3, 0.1, 0.4]
         # 设置定位精度
-        calculator.setPrecision(pLoc=in_loc, straightness=in_straightness, angleError=in_angle_error,
-                                verticalPre=in_vertical_pre)
-        x = i * interval
-        y = i * interval
-        z = i * interval
-        if route is not None:
-            x *= route[0]
-            y *= route[1]
-            z *= route[2]
+        calculator.setPrecision(pLoc=in_loc, straightness=in_straightness, angleError=in_angle_error)
+        calculator.setBiasACY(0)
+        calculator.setL(0)
+        x, y, z = 0, 0, 0
+        if points is not None:
+            x = points[i][0] * axis_range[0]
+            y = points[i][1] * axis_range[1]
+            z = points[i][2] * axis_range[2]
+        else:
+            x = i * interval
+            y = i * interval
+            z = i * interval
+            if route is not None:
+                x *= route[0]
+                y *= route[1]
+                z *= route[2]
         error, m1, m2, m3 = calculator.calculate(x, y, z, 0., 0.)
         # tmp_data_x.append([error, m1, m2, m3, x, y, z])
         tmp_data_x.append([error, m1, m2, m3, x * magnification[4], y * magnification[4], z * magnification[4]])
         target = np.concatenate(
             (np.array(in_loc)[0:3] * magnification[0],
              np.array(in_straightness).reshape(-1) * magnification[1],
-             np.array(in_angle_error).reshape(-1) * magnification[2],
-             np.array(in_vertical_pre)[0:3] * magnification[3]), 0, None)
+             np.array(in_angle_error).reshape(-1) * magnification[2]), 0, None)
         tmp_data1_y.append(target.tolist())
         # tmp_data1_y.append([input[0]])
     return tmp_data_x, tmp_data1_y

@@ -20,20 +20,23 @@ if __name__ == '__main__':
     loc_pre = [0.12, 0.13, 0.11, 0, 0]
     # 直线度
     straightness = [[0.000005, 0.0000035], [0.0000024, 0.0000033], [0.0000022, 0.0000041]]
+    # straightness = [[0.05, 0.035], [0.024, 0.033], [0.022, 0.041]]
     # straightness = [[0, 0], [0, 0], [0, 0]]
     # 角度偏差
-    angleError = [[0.000003, 0.000002], [0.000004, 0.000002], [0.0000024, 0.000005]]
+    angleError = [[0.000003, 0.000002, 0.000002], [0.000004, 0.000002, 0.000002], [0.0000024, 0.000005, 0.0000031]]
+    # angleError = [[0.03, 0.02, 0.02], [0.04, 0.02, 0.02], [0.024, 0.05, 0.031]]
     # angleError = [[0, 0], [0, 0], [0, 0]]
     # 垂直度偏差
-    verticalPre = [0.00001, 0.00002, 0.00001, 0., 0., 0., 0.]
+    # verticalPre = [0.00001, 0.00002, 0.00001, 0., 0., 0., 0.]
     # verticalPre = [0.0, 0.0, 0.0, 0., 0., 0., 0.]
-    precision = [loc_pre, straightness, angleError, verticalPre]
+    precision = [loc_pre, straightness, angleError]
     # 精度放大倍率，行程缩小倍率
-    magnification = [1, 10000, 100000, 10000, 0.0001]
+    magnification = [1, 100000, 100000, 10000, 0.0001]
+    # magnification = [1, 1, 100000, 10000, 0.0001]
     # 各轴运动行程
     axis_range = [2000., 2000., 2000., 180., 180.]
-    label = ["x", "y", "z", "S_XXY", "S_XXZ", "S_YYZ", "S_YYX", "S_ZZY", "S_ZZX", "A_XXY", "A_XXZ", "A_YYZ", "A_YYX",
-             "A_ZZY", "A_ZZX", "VER_XY", "VER_ZX", "VER_ZY"]
+    label = ["x", "y", "z", "S_XXY", "S_XXZ", "S_YYZ", "S_YYX", "S_ZZY", "S_ZZX", "A_XA", "A_XB", "A_XC", "A_YA",
+             "A_YB", "A_YC", "A_ZA", "A_ZB", "A_ZC"]
     # 运动路线，为直线运动的终点坐标，取0-1，表示各轴的行程范围
     route = [[1, 0, 1], [1, 1, 0], [0, 1, 1], [1, 1, 1], [1, 0.1, 0.1], [0.1, 1, 0.1], [0.1, 0.1, 1], [1, 1, 1]]
     data_x = []
@@ -56,7 +59,7 @@ if __name__ == '__main__':
     test_x = np.array(test_x)
     test_y = np.array(test_y)
     # 最大迭代次数
-    max_epochs = 1000
+    max_epochs = 400
     # 每批数据数量
     batch_size = 1
     # 学习率

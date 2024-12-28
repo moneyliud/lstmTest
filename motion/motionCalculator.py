@@ -54,7 +54,7 @@ class MotionCalculator:
         # 直线度
         self.__straightness = [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]
         # 角度误差
-        self.__angleError = [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]
+        self.__angleError = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
         # 垂直度误差
         self.__verticalPre = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         self.__p_trans = TRANS_PRECISION
@@ -67,18 +67,20 @@ class MotionCalculator:
     def calculate(self, x, y, z, c, a):
         # Pideal理想值
         # 平移x,y,z,旋转c偏置B，旋转a，偏置L
-        self.__pIdeal = MotionMatrix(x, y, z).rotateZ(c) * self.__BMat * MotionMatrix().rotateX(a) * self.__LMat
+        self.__pIdeal = MotionMatrix(x, y, z).rotateZ(c) * self.__BMat * MotionMatrix().rotateX(a)
+        # self.__pIdeal = MotionMatrix(x, y, z).rotateZ(c) * MotionMatrix().rotateX(a)
+        self.__pIdeal = self.__pIdeal * self.__LMat
         # x静态误差
         # 平移x带随机误差，直线度随机y,z,随机旋转δα、δβ、δγ
         e_static_x = MotionMatrix(self.__randomError(x, _x), _randomTrans(self.__straightness[_x][0]),
                                   _randomTrans(self.__straightness[_x][1]),
                                   # 倾斜
-                                  _randomRotate(self.__angleError[_x][1]),
-                                  # _randomRotate(),
-                                  # 俯仰
                                   _randomRotate(self.__angleError[_x][0]),
                                   # _randomRotate(),
-                                  _randomRotate(), RotateType.ABSOLUTE)
+                                  # 俯仰
+                                  _randomRotate(self.__angleError[_x][1]),
+                                  # _randomRotate(),
+                                  _randomRotate(self.__angleError[_x][2]), RotateType.ABSOLUTE)
 
         # y静态误差
         # 平移y带随机误差，直线度随机x,z,随机旋转δα、δβ、δγ
@@ -90,7 +92,7 @@ class MotionCalculator:
                                   # 倾斜
                                   _randomRotate(self.__angleError[_y][1]),
                                   # _randomRotate(),
-                                  _randomRotate(),
+                                  _randomRotate(self.__angleError[_y][2]),
                                   RotateType.ABSOLUTE)
 
         # z静态误差
@@ -103,7 +105,7 @@ class MotionCalculator:
                                   # 在ZX平面内旋转
                                   _randomRotate(self.__angleError[_z][1]),
                                   # _randomRotate(),
-                                  _randomRotate(), RotateType.ABSOLUTE)
+                                  _randomRotate(self.__angleError[_z][2]), RotateType.ABSOLUTE)
 
         # c静态误差
         # 按c定位精度、重复定位精度，随机旋转δα、δβ、δγ
@@ -145,14 +147,21 @@ class MotionCalculator:
                          MotionMatrix().transY(y) * e_static_y * e_v_zx * e_v_zy * \
                          MotionMatrix().transZ(z) * e_static_z * e_v_cx * e_v_cy * \
                          MotionMatrix().rotateZ(c) * e_static_c * self.__BMat * e_v_cb * e_v_ca * \
-                         MotionMatrix().rotateX(a) * e_static_a * MotionMatrix() * e_static_sp * self.__LMat
+                         MotionMatrix().rotateX(a) * e_static_a * MotionMatrix() * e_static_sp
 
+        # self.__pActual = MotionMatrix().transX(x) * e_static_x * e_v_xy * \
+        #                  MotionMatrix().transY(y) * e_static_y * e_v_zx * e_v_zy * \
+        #                  MotionMatrix().transZ(z) * e_static_z * e_v_cx * e_v_cy * \
+        #                  MotionMatrix().rotateZ(c) * e_static_c * e_v_cb * e_v_ca * \
+        #                  MotionMatrix().rotateX(a) * e_static_a * MotionMatrix() * e_static_sp
+        self.__pActual = self.__pActual * self.__LMat
         # print((MotionMatrix().rotateX(c)).matrix)
         # 误差
         self.__pError = self.__pActual.matrix - self.__pIdeal.matrix
-        m1 = self.__pError[0][3]
-        m2 = self.__pError[1][3]
-        m3 = self.__pError[2][3]
+        p_error_list = self.__pError.tolist()
+        m1 = p_error_list[0][0]
+        m2 = p_error_list[1][0]
+        m3 = p_error_list[2][0]
 
         e_dis = math.sqrt(m1 * m1 + m2 * m2 + m3 * m3)
         # print("loc_z")
