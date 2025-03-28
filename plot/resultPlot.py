@@ -29,9 +29,12 @@ def draw_one_graph(y_data, pred_y_data, y_label, title):
 
 def plot_cnn_result(train_x, train_y, pred_y_for_train, test_x, test_y, pred_y_for_test, y_label,
                     axis_range, magnification):
-    draw_one_graph(test_y[:, 0:3], pred_y_for_test[:, 0: 3], y_label[0:3], "loc")
-    draw_one_graph(test_y[:, 3:9], pred_y_for_test[:, 3:9], y_label[3:9], "straightness")
-    draw_one_graph(test_y[:, 9:18], pred_y_for_test[:, 9:18], y_label[9:18], "angle error")
+    draw_one_graph(test_y[:, 0:3] / magnification[0], pred_y_for_test[:, 0: 3] / magnification[0],
+                   y_label[0:3], "loc")
+    draw_one_graph(test_y[:, 3:9] / magnification[1], pred_y_for_test[:, 3:9] / magnification[1],
+                   y_label[3:9], "straightness")
+    draw_one_graph(test_y[:, 9:18] / magnification[2], pred_y_for_test[:, 9:18] / magnification[2],
+                   y_label[9:18], "angle error")
     # draw_one_graph(test_y[:, 15:18], pred_y_for_test[:, 15:18], y_label[15:18], "vertical error")
     # plt.figure()
     color = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#000000', '#880000', '#008800',
@@ -122,6 +125,7 @@ def plot_cnn_result(train_x, train_y, pred_y_for_train, test_x, test_y, pred_y_f
         plt.plot(test_t, error_percent[i], label="reference_percent", color="#FF0000")
         plt.xlabel('t')
         plt.ylabel(label_percent[i])
+        plt.ylim(-100, 100)
         plt.legend()
         plt.savefig("image/result" + str(idx) + ".png")
         idx += 1

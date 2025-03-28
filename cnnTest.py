@@ -31,22 +31,29 @@ if __name__ == '__main__':
     # verticalPre = [0.0, 0.0, 0.0, 0., 0., 0., 0.]
     precision = [loc_pre, straightness, angleError]
     # 精度放大倍率，行程缩小倍率
-    magnification = [1, 100000, 100000, 10000, 0.0001]
+    magnification = [5, 100000, 100000, 10000, 0.0001]
     # magnification = [1, 1, 100000, 10000, 0.0001]
     # 各轴运动行程
     axis_range = [2000., 2000., 2000., 180., 180.]
     label = ["x", "y", "z", "S_XXY", "S_XXZ", "S_YYZ", "S_YYX", "S_ZZY", "S_ZZX", "A_XA", "A_XB", "A_XC", "A_YA",
              "A_YB", "A_YC", "A_ZA", "A_ZB", "A_ZC"]
     # 运动路线，为直线运动的终点坐标，取0-1，表示各轴的行程范围
-    route = [[1, 0, 1], [1, 1, 0], [0, 1, 1], [1, 1, 1], [1, 0.1, 0.1], [0.1, 1, 0.1], [0.1, 0.1, 1], [1, 1, 1]]
+    route = [[1, 1, 1], [1, 0, 1], [1, 1, 0], [0, 1, 1]]
+    # route = [[1, 0, 1], [1, 1, 0], [0, 1, 1], [1, 1, 1], [1, 0.1, 0.1], [0.1, 1, 0.1], [0.1, 0.1, 1], [1, 1, 1]]
     data_x = []
     data_y = []
     all_data_x = []
     all_data_y = []
+    data_len = 100
+    # 体对角线的输入
+    sample_x = None
+    test_route = [0.5, 0.7, 1]
     # 生成各轴运动数据
     for i in range(len(route)):
-        tmp_x, tmp_y = motion.motionDataMoc.generateDataCNN(200, sample_len, precision, route=route[i],
+        tmp_x, tmp_y = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=route[i],
                                                             axis_range=axis_range, pre_magnification=magnification)
+        if i == 0:
+            sample_x = np.array(tmp_x)
         all_data_x.append(tmp_x)
         all_data_y.append(tmp_y)
     # 各轴运动路径、末端误差数据，整理为一个输入
@@ -54,12 +61,12 @@ if __name__ == '__main__':
     # 各轴误差数据作为标签数据，整理为一个数组
     data_y = np.array(all_data_y).reshape(-1, len(all_data_y[0][0]))
     # 生成一个路径的测试数据
-    test_x, test_y = motion.motionDataMoc.generateDataCNN(200, sample_len, precision, route=[0.5, 1, 1],
+    test_x, test_y = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=test_route,
                                                           axis_range=axis_range, pre_magnification=magnification)
     test_x = np.array(test_x)
     test_y = np.array(test_y)
     # 最大迭代次数
-    max_epochs = 400
+    max_epochs = 1000
     # 每批数据数量
     batch_size = 1
     # 学习率
@@ -74,15 +81,28 @@ if __name__ == '__main__':
     tensor_train_x = torch.tensor(data_x, dtype=torch.double, device=device).unsqueeze(1).unsqueeze(1)
     # 测试数据转为tensor对象
     tensor_test_x = torch.tensor(test_x, dtype=torch.double, device=device).unsqueeze(1).unsqueeze(1)
+    # 体对角线转换为tensor对象
+    tensor_sample_x = torch.tensor(sample_x, dtype=torch.double, device=device).unsqueeze(1).unsqueeze(1)
     for i in range(tensor_train_x.shape[0]):
         # 预测训练数据
         train_pred.append(model.model(tensor_train_x[i]).detach().cpu().numpy())
-    for i in range(tensor_test_x.shape[0]):
-        # 预测测试数据
-        test_pred.append(model.model(tensor_test_x[i]).detach().cpu().numpy())
+    # 预测整个机床的18项误差
+    precision_grid = []
+    for i in range(tensor_sample_x.shape[0]):
+        precision_grid.append(model.model(tensor_sample_x[i]).detach().cpu().numpy())
+    # 旧 start
+    # for i in range(tensor_test_x.shape[0]):
+    #     # 预测测试数据
+    #     test_pred.append(model.model(tensor_test_x[i]).detach().cpu().numpy())
+    # 旧 end
+    test_x_new, test_pred_new = motion.motionDataMoc.generate_pred_by_grid(precision_grid, data_len, sample_len,
+                                                                           route=test_route,
+                                                                           axis_range=axis_range,
+                                                                           magnification=magnification)
+
     # 转为numpy对象
     train_pred = np.array(train_pred)
-    test_pred = np.array(test_pred)
+    test_pred = np.array(test_pred_new)
     # train_pred = model.model(tensor_train_x)
     # test_pred = model.model(tensor_test_x)
     # 画出图形
