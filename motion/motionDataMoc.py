@@ -4,6 +4,7 @@ from motion.motionCalculator import MotionCalculator
 import numpy as np
 import random
 import torch
+import motion
 
 
 # 增加随机误差
@@ -43,6 +44,50 @@ def generateDataCNN(data_len, sample_len, presicion, next_step=0, route=None, ax
                     points=None, error_param=None):
     data_x, data_y = generateData(data_len, sample_len, presicion, next_step, route, axis_range, pre_magnification,
                                   points, error_param)
+    return data_x, data_y
+
+
+def generateDataAll(data_len, route_len, sample_len, precision, axis_range, magnification, error_param=None):
+    # 运动路线，为直线运动的终点坐标，取0-1，表示各轴的行程范围
+    route = [[1, 1, 1], [1, 0, 1], [1, 1, 0], [0, 1, 1]]
+    all_data_x = []
+    all_data_y = []
+    # 生成各轴运动数据
+    for k in range(route_len):
+        # 18项误差的随机值
+        # loc_pre_random = []
+        # straightness_random = []
+        # angle_error_random = []
+        # precision_random = [loc_pre_random, straightness_random, angle_error_random]
+        precision_random = precision
+        # 18项误差线性变化随机值
+        # error_params_random = [[(1 if random.random() - 0.5 > 0 else -1) * random.random() * 6,
+        #                         (1 if random.random() - 0.5 > 0 else -1) * random.random() * 6, random.random()]
+        #                        for n in range(18)]
+        if error_param is None:
+            error_params_random = [[random.random() * 6,
+                                    random.random() * 6, random.random()]
+                                   for n in range(18)]
+        else:
+            error_params_random = error_param
+        target_y = None
+        tmp_data_x = []
+        for i in range(len(route)):
+            tmp_x, tmp_y = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision_random, route=route[i],
+                                                                axis_range=axis_range, pre_magnification=magnification,
+                                                                error_param=error_params_random)
+            tmp_data_x.append(tmp_x)
+            if i == 0:
+                target_y = tmp_y
+        tmp_data_x = np.array(tmp_data_x)
+        tmp_data_x = np.transpose(tmp_data_x, (1, 0, 2))
+        tmp_data_x = tmp_data_x.reshape(-1, len(route) * tmp_data_x.shape[-1])
+        all_data_x.append(tmp_data_x.tolist())
+        all_data_y.append(target_y)
+    # 各轴运动路径、末端误差数据，整理为一个输入
+    data_x = np.array(all_data_x)
+    # 各轴误差数据作为标签数据，整理为一个数组
+    data_y = np.array(all_data_y)
     return data_x, data_y
 
 

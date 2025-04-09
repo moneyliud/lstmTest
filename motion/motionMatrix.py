@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from numpy import dot
 from math import *
 from enum import Enum
@@ -10,9 +11,11 @@ class RotateType(Enum):
 
 
 class MotionMatrix:
-    def __init__(self, x=0.0, y=0.0, z=0.0, a=0.0, b=0.0, g=0.0, rotateType=RotateType.ANGLE, dim=4):
+    def __init__(self, x=0.0, y=0.0, z=0.0, a=0.0, b=0.0, g=0.0, rotateType=RotateType.ANGLE, dim=4, device=None):
         self.dim = dim
         self.matrix = np.diag([1.0] * self.dim)
+        if device is not None and device != "":
+            self.matrix = torch.tensor(self.matrix, device=device, requires_grad=True)
         self.__rotateType = rotateType
         self.trans(x, y, z)
         self.rotateX(a, rotateType)

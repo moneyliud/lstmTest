@@ -167,6 +167,7 @@ class MotionCalculator:
         # print("loc_z")
         # print(self.__p_loc[_z])
         # print(e_dis)
+        # todo error不要用m1,m2,m3的模来计算, 改为误差向量在理论向量方向上的投影长度误差
         return e_dis, m1, m2, m3
 
     # 偏置

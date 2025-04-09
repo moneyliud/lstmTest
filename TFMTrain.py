@@ -36,83 +36,78 @@ if __name__ == '__main__':
     # 运动路线，为直线运动的终点坐标，取0-1，表示各轴的行程范围
     route = [[1, 1, 1], [1, 0, 1], [1, 1, 0], [0, 1, 1]]
     # route = [[1, 0, 1], [1, 1, 0], [0, 1, 1], [1, 1, 1], [1, 0.1, 0.1], [0.1, 1, 0.1], [0.1, 0.1, 1], [1, 1, 1]]
-    data_x = []
-    data_y = []
-    all_data_x = []
-    all_data_y = []
     data_len = 100
     # 多少组四线路径
-    route_len = 20
+    route_len = 10
     # 最大迭代次数
-    max_epochs = 3000
+    max_epochs = 1
     # 每批数据数量
-    batch_size = 4
+    batch_size = 1
+    load_best = True
     # 学习率
     learning_rate = 0.0001
-    test_route = [1, 0.7, 0.5]
+    test_route = [1, 1, 1]
     # 生成一个路径的测试数据
-    test_error_param = [[-2.626736262022589, 3.9816823239449013, 0.4475779332261868],
-                        [4.898369153866513, 0.6535184026344443, 0.3959563017327412],
-                        [0.9533893812664391, 4.321387650379188, 0.02204032468391437],
-                        [0.24440702204519904, -3.958786536533847, 0.6583649830759168],
-                        [3.5905037616206474, -1.9612116414839114, 0.39881849320093066],
-                        [5.035059919859897, -3.3730870998153963, 0.24439578721144561],
-                        [-1.3507938693774302, -1.3721232074566159, 0.07062618877740445],
-                        [-5.51405717986294, 0.9911795643678536, 0.8182693704870628],
-                        [-2.4276056326006232, -0.01938183378397973, 0.6143838486206817],
-                        [3.232230008214886, -2.3719314887049263, 0.2296585006296279],
-                        [-0.8467920258479993, -4.27827754416902, 0.959136283574746],
-                        [-4.039960769419381, -4.648571136021942, 0.7479244636780055],
-                        [-1.0923572392653118, -4.966197291891709, 0.6492033619068038],
-                        [-2.031126625296771, 4.465203600405606, 0.8525929513569045],
-                        [-3.0316317013854395, -5.873128889484105, 0.6901978943595463],
-                        [-1.9320195212275568, 5.326115305879207, 0.7308464096223587],
-                        [-5.451774079287787, -2.7198500874180915, 0.5603441309229098],
-                        [4.5396633186930435, 4.929125528584144, 0.7249377525195019]]
-    # 生成各轴运动数据
-    for k in range(route_len):
-        # 18项误差的随机值
-        # loc_pre_random = []
-        # straightness_random = []
-        # angle_error_random = []
-        # precision_random = [loc_pre_random, straightness_random, angle_error_random]
-        precision_random = precision
-        # 18项误差线性变化随机值
-        error_params_random = [[(1 if random.random() - 0.5 > 0 else -1) * random.random() * 6,
-                                (1 if random.random() - 0.5 > 0 else -1) * random.random() * 6, random.random()]
-                               for n in range(18)]
-        for i in range(len(route)):
-            tmp_x, tmp_y = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision_random, route=route[i],
-                                                                axis_range=axis_range, pre_magnification=magnification,
-                                                                error_param=error_params_random)
-            all_data_x.append(tmp_x)
-            all_data_y.append(tmp_y)
-    # 各轴运动路径、末端误差数据，整理为一个输入
-    data_x = np.array(all_data_x)
-    # 各轴误差数据作为标签数据，整理为一个数组
-    data_y = np.array(all_data_y)
+    # todo 误差增加负向误差
+    test_error_param = [[4.7887194555963255, 0.4460618609979403, 0.478609241527035],
+                        [0.6873725685235172, 2.9875751745178087, 0.9794735286526571],
+                        [4.535475693069581, 2.9173525630956263, 0.5506782494905588],
+                        [1.4049564502737972, 1.6158067832154326, 0.5234738589988253],
+                        [0.7467095657561036, 4.515754506183082, 0.7608852455039745],
+                        [3.00859321444696, 5.040013743165973, 0.45451975869615724],
+                        [2.0979793289187607, 0.5504565321525232, 0.8295217960434513],
+                        [0.3408292725935962, 3.430547548490598, 0.6385488419507832],
+                        [5.925506277060648, 0.968058240941668, 0.7010201830502059],
+                        [0.23145427669709195, 4.884802258319203, 0.9822079724307121],
+                        [3.788902991626234, 5.354173413157307, 0.9937083523717993],
+                        [3.9014983158102443, 0.9853261390752617, 0.2822661253420671],
+                        [3.8930690035075006, 2.3945249711732965, 0.027491172062673708],
+                        [2.5718760699285834, 2.4590918484517257, 0.043019414283773205],
+                        [2.9537169160920196, 3.0866430925396813, 0.3261355358997603],
+                        [0.48171559581933887, 4.798924831691007, 0.22651219118644284],
+                        [5.094860945869729, 3.422991873304562, 0.9531220544221468],
+                        [5.356315264062595, 4.130833225380868, 0.786862073839904]]
+
+    data_x, data_y = motion.motionDataMoc.generateDataAll(data_len, route_len, sample_len, precision, axis_range,
+                                                          magnification)
     test_x, test_y = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=test_route,
                                                           axis_range=axis_range, pre_magnification=magnification,
                                                           error_param=test_error_param)
     test_x = np.array(test_x)
     test_y = np.array(test_y)
+    #
+    model_path = None
+    weight_path = None
+    if load_best:
+        model_path = "./weights/TFMP_model.pt"
+        weight_path = "./weights/TFMP_best.pt"
     # 初始化模型
-    model = TFMPrecision([data_x, data_y], seq_length=data_len, epoch=max_epochs, batch_size=batch_size,
-                         lr=learning_rate, loss_thres=0.005)
+    model = TFMPrecision([data_x, data_y], data_len=data_len, route_len=route_len, seq_length=data_len,
+                         epoch=max_epochs, batch_size=batch_size, lr=learning_rate, loss_thres=0.005,
+                         magnification=magnification, axis_range=axis_range, precision=precision, model_path=model_path,
+                         weight_path=weight_path)
     # 开始模型训练
     model.run()
     # 训练数据转为tensor对象
     tensor_train_x = torch.tensor(data_x, dtype=torch.double, device=device)
-    # 体对角线的输入
-    sample_x, _y = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=[1, 1, 1],
-                                                        axis_range=axis_range, pre_magnification=magnification,
-                                                        error_param=test_error_param)
-    # 体对角线转换为tensor对象
-    tensor_sample_x = torch.tensor(sample_x, dtype=torch.double, device=device).unsqueeze(0)
+    mask = torch.triu(torch.ones((data_len, data_len), device=device), diagonal=1).bool()
     train_pred = model.model(tensor_train_x).detach().cpu().numpy()
     train_pred = train_pred.reshape(-1, train_pred.shape[-1])
+    # 四线的输入
+    sample_x = []
+    for i in range(len(route)):
+        tmp_x, tmp_y = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=route[i],
+                                                            axis_range=axis_range, pre_magnification=magnification,
+                                                            error_param=test_error_param)
+        sample_x.append(tmp_x)
+        if i == 0:
+            target_y = tmp_y
+    sample_x = np.array(sample_x)
+    sample_x = np.transpose(sample_x, (1, 0, 2))
+    sample_x = sample_x.reshape(data_len, len(route) * sample_x.shape[-1])
     # 预测整个机床的18项误差
-    precision_grid = model.model(tensor_sample_x).detach().cpu().numpy()
+    tensor_sample_x = torch.tensor(sample_x.tolist(), dtype=torch.double, device=device).unsqueeze(0)
+    precision_grid = model.model(tensor_sample_x, mask).detach().cpu().numpy()
     precision_grid = precision_grid.reshape(-1, precision_grid.shape[-1])
     test_x_new, test_pred_new = motion.motionDataMoc.generate_pred_by_grid(precision_grid, data_len, sample_len,
                                                                            route=test_route,
@@ -122,6 +117,7 @@ if __name__ == '__main__':
     # 转为numpy对象
     train_pred = np.array(train_pred)
     test_pred = np.array(test_pred_new)
+    avg = np.average(np.abs(test_pred - test_y))
     # 画出图形
     plot_cnn_result(data_x.reshape(-1, data_x.shape[-1]), data_y.reshape(-1, data_y.shape[-1]), train_pred, test_x,
                     test_y, test_pred, label, axis_range, magnification)
