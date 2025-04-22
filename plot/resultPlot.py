@@ -72,8 +72,8 @@ def plot_cnn_result(train_x, train_y, pred_y_for_train, test_x, test_y, pred_y_f
     if train_x.shape[1] > 4:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.plot(train_x[:, 4], train_x[:, 5], train_x[:, 6])
-        ax.plot(test_x[:, 4], test_x[:, 5], test_x[:, 6])
+        ax.plot(train_x[:, 1], train_x[:, 2], train_x[:, 3])
+        ax.plot(test_x[:, 1], test_x[:, 2], test_x[:, 3])
         ax.set_xlabel('X Label')
         ax.set_ylabel('Y Label')
         ax.set_zlabel('Z Label')
@@ -90,23 +90,24 @@ def plot_cnn_result(train_x, train_y, pred_y_for_train, test_x, test_y, pred_y_f
     calculator.setBiasACY(0)
     calculator.setL(0)
     calculator.setAxisRange(axis_range)
-    theory_pre = np.zeros((4, test_x.shape[0]))
-    pred_pre = np.zeros((4, test_x.shape[0]))
-    error_percent = np.zeros((4, test_x.shape[0]))
-    label = ["pos_error", "x_error", "y_error", "z_error"]
-    label_percent = ["pos_error_percent", "x_error_percent", "y_error_percent", "z_error_percent"]
+    theory_pre = np.zeros((5, test_x.shape[0]))
+    pred_pre = np.zeros((5, test_x.shape[0]))
+    error_percent = np.zeros((5, test_x.shape[0]))
+    label = ["pos_error", "x_error", "y_error", "z_error", "project_error"]
+    label_percent = ["pos_error_percent", "x_error_percent", "y_error_percent", "z_error_percent",
+                     "project_error_percent"]
     for i in range(test_x.shape[0]):
         pred_loc, pred_straightness, pred_angle = array_to_precession_input(pred_y_for_test[i],
                                                                             magnification)
         test_loc, test_straightness, test_angle = array_to_precession_input(test_y[i], magnification)
         calculator.setPrecision(pLoc=pred_loc, straightness=pred_straightness, angleError=pred_angle)
-        pre = calculator.calculate(test_x[i][4] / magnification[4], test_x[i][5] / magnification[4],
-                                   test_x[i][6] / magnification[4], 0., 0.)
+        pre = calculator.calculate(test_x[i][1] / magnification[4], test_x[i][2] / magnification[4],
+                                   test_x[i][3] / magnification[4], 0., 0.)
         for k in range(len(pre)):
             pred_pre[k][i] = pre[k]
         calculator.setPrecision(pLoc=test_loc, straightness=test_straightness, angleError=test_angle)
-        actual = calculator.calculate(test_x[i][4] / magnification[4], test_x[i][5] / magnification[4],
-                                      test_x[i][6] / magnification[4], 0., 0.)
+        actual = calculator.calculate(test_x[i][1] / magnification[4], test_x[i][2] / magnification[4],
+                                      test_x[i][3] / magnification[4], 0., 0.)
         for k in range(len(actual)):
             theory_pre[k][i] = actual[k]
             error_percent[k][i] = (pre[k] - actual[k]) / actual[k] * 100

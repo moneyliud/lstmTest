@@ -163,12 +163,22 @@ class MotionCalculator:
         m2 = p_error_list[1][0]
         m3 = p_error_list[2][0]
 
+        a1 = np.array(self.__pIdeal.matrix.flatten().tolist()[0][0:3])
+        b1 = np.array(self.__pActual.matrix.flatten().tolist()[0][0:3])
+        len_a1 = np.linalg.norm(a1)
+        if len_a1 == 0:
+            cos_ab = 1.0
+        else:
+            cos_ab = a1.dot(b1) / (len_a1 * np.linalg.norm(b1))
+        # 误差在理论方向上的投影长度
+        error_pro = np.linalg.norm(b1) * cos_ab - len_a1
+
         e_dis = math.sqrt(m1 * m1 + m2 * m2 + m3 * m3)
         # print("loc_z")
         # print(self.__p_loc[_z])
         # print(e_dis)
-        # todo error不要用m1,m2,m3的模来计算, 改为误差向量在理论向量方向上的投影长度误差
-        return e_dis, m1, m2, m3
+        # e_dis刀尖点误差, error_pro 为误差向量在测量向量方向上的投影长度误差
+        return e_dis, m1, m2, m3, error_pro
 
     # 偏置
     def setBiasACY(self, bias):

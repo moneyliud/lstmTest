@@ -61,13 +61,13 @@ def generateDataAll(data_len, route_len, sample_len, precision, axis_range, magn
         # precision_random = [loc_pre_random, straightness_random, angle_error_random]
         precision_random = precision
         # 18项误差线性变化随机值
-        # error_params_random = [[(1 if random.random() - 0.5 > 0 else -1) * random.random() * 6,
-        #                         (1 if random.random() - 0.5 > 0 else -1) * random.random() * 6, random.random()]
-        #                        for n in range(18)]
         if error_param is None:
-            error_params_random = [[random.random() * 6,
-                                    random.random() * 6, random.random()]
+            error_params_random = [[(1 if random.random() - 0.5 > 0 else -1) * random.random() * 6,
+                                    (1 if random.random() - 0.5 > 0 else -1) * random.random() * 6, random.random()]
                                    for n in range(18)]
+            # error_params_random = [[random.random() * 6,
+            #                         random.random() * 6, random.random()]
+            #                        for n in range(18)]
         else:
             error_params_random = error_param
         target_y = None
@@ -162,11 +162,13 @@ def generateData(data_len, sample_len, presicion, next_step=0, route=None, axis_
         calculator.setPrecision(pLoc=in_loc, straightness=in_straightness, angleError=in_angle_error)
         calculator.setBiasACY(0)
         calculator.setL(0)
-        error, m1, m2, m3 = calculator.calculate(x, y, z, 0., 0.)
+        error, m1, m2, m3, error_pjct = calculator.calculate(x, y, z, 0., 0.)
         # tmp_data_x.append([error, m1, m2, m3, x, y, z])
         point_dis = math.sqrt(x ** 2 + y ** 2 + z ** 2) * magnification[4]
+        # tmp_data_x.append(
+        #     [error, m1, m2, m3, x * magnification[4], y * magnification[4], z * magnification[4], point_dis])
         tmp_data_x.append(
-            [error, m1, m2, m3, x * magnification[4], y * magnification[4], z * magnification[4], point_dis])
+            [error_pjct, x * magnification[4], y * magnification[4], z * magnification[4]])
         target = np.concatenate(
             (np.array(in_loc)[0:3] * magnification[0],
              np.array(in_straightness).reshape(-1) * magnification[1],
