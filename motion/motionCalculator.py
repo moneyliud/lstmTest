@@ -162,6 +162,10 @@ class MotionCalculator:
         m1 = p_error_list[0][0]
         m2 = p_error_list[1][0]
         m3 = p_error_list[2][0]
+        pos_list = self.__pActual.matrix.tolist()
+        x_act = pos_list[0][0]
+        y_act = pos_list[1][0]
+        z_act = pos_list[2][0]
 
         a1 = np.array(self.__pIdeal.matrix.flatten().tolist()[0][0:3])
         b1 = np.array(self.__pActual.matrix.flatten().tolist()[0][0:3])
@@ -178,7 +182,7 @@ class MotionCalculator:
         # print(self.__p_loc[_z])
         # print(e_dis)
         # e_dis刀尖点误差, error_pro 为误差向量在测量向量方向上的投影长度误差
-        return e_dis, m1, m2, m3, error_pro
+        return e_dis, m1, m2, m3, error_pro, x_act, y_act, z_act
 
     # 偏置
     def setBiasACY(self, bias):

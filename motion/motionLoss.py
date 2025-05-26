@@ -29,9 +29,10 @@ class MotionLoss(nn.Module):
                                         angleError=angle / self.magnification[2])
                 calculator.setBiasACY(0)
                 calculator.setL(0)
-                error, m1, m2, m3, error_pjct = calculator.calculate(targets[i][k][4] / self.magnification[4],
-                                                                     targets[i][k][5] / self.magnification[4],
-                                                                     targets[i][k][6] / self.magnification[4], 0, 0)
+                error, m1, m2, m3, error_pjct, x_act, y_act, z_act = calculator.calculate(
+                    targets[i][k][4] / self.magnification[4],
+                    targets[i][k][5] / self.magnification[4],
+                    targets[i][k][6] / self.magnification[4], 0, 0)
                 inputs_error[i][k][0] = error
                 inputs_error[i][k][1] = m1
                 inputs_error[i][k][2] = m2

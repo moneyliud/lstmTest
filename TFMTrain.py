@@ -13,6 +13,7 @@ if __name__ == '__main__':
     sample_len = 0
     # 各轴定位精度
     # precision = [0.1, 0.15, 0.2, 0.25, 0.3]
+    # loc_pre = [0.0, -0.0, 0.0, 0, 0]
     loc_pre = [0.12, -0.13, 0.11, 0, 0]
     # 直线度
     straightness = [[0.000005, -0.0000035], [-0.0000024, 0.0000033], [0.0000022, 0.0000041]]
@@ -34,19 +35,22 @@ if __name__ == '__main__':
     label = ["x", "y", "z", "S_XXY", "S_XXZ", "S_YYZ", "S_YYX", "S_ZZY", "S_ZZX", "A_XA", "A_XB", "A_XC", "A_YA",
              "A_YB", "A_YC", "A_ZA", "A_ZB", "A_ZC"]
     # 运动路线，为直线运动的终点坐标，取0-1，表示各轴的行程范围
-    route = [[1, 1, 1], [1, 0, 1], [1, 1, 0], [0, 1, 1]]
+    route = [[[0, 0, 0], [1, 1, 1]],
+             [[0, 0, 0], [1, 0, 1]],
+             [[0, 0, 0], [1, 1, 0]],
+             [[0, 0, 0], [0, 1, 1]]]
     # route = [[1, 0, 1], [1, 1, 0], [0, 1, 1], [1, 1, 1], [1, 0.1, 0.1], [0.1, 1, 0.1], [0.1, 0.1, 1], [1, 1, 1]]
     data_len = 100
     # 多少组四线路径
     route_len = 10
     # 最大迭代次数
-    max_epochs = 700
+    max_epochs = 200
     # 每批数据数量
     batch_size = 5
-    load_best = False
+    load_best = True
     # 学习率
     learning_rate = 0.0002
-    test_route = [1, 1, 1]
+    test_route = [[0, 0, 0], [1, 1, 1]]
     # 生成一个路径的测试数据
     test_error_param = [[5.192216764043185, 0.2617623586880524, 0.7588709747758215],
                         [-1.4290295470882306, -4.547730223217397, 0.4450699781137264],
@@ -67,14 +71,21 @@ if __name__ == '__main__':
                         [-3.705285190345603, -5.074995507147135, 0.49576772566349103],
                         [3.5245861908817053, -5.777751854551074, 0.6649989686033323]]
 
+    route_data13, theory_route_data13, solve_result13, precision_target13 = motion.motionDataMoc.generateData13Line(
+        data_len, sample_len, precision, axis_range=axis_range, pre_magnification=magnification,
+        error_param=test_error_param)
     data_x, data_y = motion.motionDataMoc.generateDataAll(data_len, route_len, sample_len, precision, axis_range,
                                                           magnification, error_param=test_error_param)
-    test_x, test_y = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=test_route,
-                                                          axis_range=axis_range, pre_magnification=magnification,
-                                                          error_param=test_error_param)
+    test_x, test_y, _tr = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=test_route,
+                                                               axis_range=axis_range, pre_magnification=magnification,
+                                                               error_param=test_error_param)
     test_x = np.array(test_x)
     test_y = np.array(test_y)
-    #
+
+    # 画出图形
+    plot_cnn_result(data_x.reshape(-1, data_x.shape[-1]), data_y.reshape(-1, data_y.shape[-1]), None, test_x,
+                    test_y, solve_result13, label, axis_range, magnification, dir_path="image13Line")
+
     model_path = None
     weight_path = None
     if load_best:
@@ -95,9 +106,9 @@ if __name__ == '__main__':
     # 四线的输入
     sample_x = []
     for i in range(len(route)):
-        tmp_x, tmp_y = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=route[i],
-                                                            axis_range=axis_range, pre_magnification=magnification,
-                                                            error_param=test_error_param)
+        tmp_x, tmp_y, _tr = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=route[i],
+                                                                 axis_range=axis_range, pre_magnification=magnification,
+                                                                 error_param=test_error_param)
         sample_x.append(tmp_x)
         if i == 0:
             target_y = tmp_y
