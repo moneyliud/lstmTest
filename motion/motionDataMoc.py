@@ -99,7 +99,7 @@ def generateData13Line(data_len, sample_len, precision, next_step=0, axis_range=
             precision_target = data_y
 
     for i in range(len(route_data)):
-        tmp = Method13LineSolver.solve(route_data[i], theory_route_data[i])
+        tmp = Method13LineSolver.solve(route_data[i], theory_route_data[i], axis_range)
         tmp[0:3] = [x * pre_magnification[0] for x in tmp[0:3]]
         tmp[3:9] = [x * pre_magnification[1] for x in tmp[3:9]]
         tmp[9:18] = [x * pre_magnification[2] for x in tmp[9:18]]

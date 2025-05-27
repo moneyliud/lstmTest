@@ -4,7 +4,7 @@ import math
 
 class Method13LineSolver:
     @staticmethod
-    def solve(route, theory_route, L=0):
+    def solve(route, theory_route, axis_range, L=0):
         # 0: x定位误差xx，1:y定位误差yy，2:z定位误差zz
         # 垂直度误差: 3:xy 4:xz 5:yx 6:yz 7:zx 8:zy
         # 角度误差: 9:xa 10:xb 11:xc 12:ya 13:yb 14:yc 15:za 16:zb 17:zc
@@ -27,8 +27,8 @@ class Method13LineSolver:
         ly = theory_route[3][1]
         lz = theory_route[6][2]
         xx = ((route[0][0] + route[1][0] + route[2][0] - 3 * lx) + (3 * L - d13) * xb + d12 * xc) / 3
-        yy = ((route[3][1] + route[4][1] + route[5][1] - 3 * ly) + (3 * L - d46) * ya + d45 * yc) / 3
-        zz = ((route[6][2] + route[7][2] + route[8][2] - 3 * lz) + (3 * L - d79) * za + d78 * zb) / 3
+        yy = ((route[3][1] + route[4][1] + route[5][1] - 3 * ly) - (3 * L - d46) * ya - d45 * yc) / 3
+        zz = ((route[6][2] + route[7][2] + route[8][2] - 3 * lz) - d79 * za + d78 * zb) / 3
 
         x = lx
         y = ly
@@ -57,7 +57,7 @@ class Method13LineSolver:
         theta13x = theory_route[12][0] / L13
         theta13y = theory_route[12][1] / L13
         theta13z = theory_route[12][2] / L13
-
+        L13_theory = math.sqrt(pow(theory_route[12][0], 2) + pow(theory_route[12][1], 2) + pow(theory_route[12][2], 2))
         B = [(L10 - math.sqrt(pow(theory_route[9][0], 2) + pow(theory_route[9][1], 2))) * theta10x
              - xx + L * xb + theory_route[9][1] * xc + theory_route[9][1] * yc,
              (L10 - math.sqrt(pow(theory_route[9][0], 2) + pow(theory_route[9][1], 2))) * theta10y
@@ -70,19 +70,29 @@ class Method13LineSolver:
              - yy - L * ya + theory_route[11][2] * ya - L * za + theory_route[11][2] * za,
              (L12 - math.sqrt(pow(theory_route[11][1], 2) + pow(theory_route[11][2], 2))) * theta12z
              - zz - theory_route[11][1] * ya,
-             (L13 - math.sqrt(
-                 pow(theory_route[12][0], 2) + pow(theory_route[12][0], 2) + pow(theory_route[12][1], 2))) * theta13x
-             - xx + L * xb - theory_route[12][2] * xb + L * zb - theory_route[12][2] * L * zb
-             + theory_route[12][1] * (xc + yc),
-             (L13 - math.sqrt(
-                 pow(theory_route[12][1], 2) + pow(theory_route[12][1], 2) + pow(theory_route[12][1], 2))) * theta13y
-             - yy - L * ya + theory_route[12][2] * ya - L * za + theory_route[12][2] * za - theory_route[12][0] * xc,
-             (L13 - math.sqrt(
-                 pow(theory_route[12][2], 2) + pow(theory_route[12][2], 2) + pow(theory_route[12][1], 2))) * theta13z
-             - zz - theory_route[12][1] * ya + theory_route[12][0] * xb]
+             (L13 - L13_theory) * theta13x - xx + L * xb - theory_route[12][2] * xb + L * zb
+             - theory_route[12][2] * L * zb + theory_route[12][1] * (xc + yc),
+             (L13 - L13_theory) * theta13y - yy - L * ya + theory_route[12][2] * ya - L * za
+             + theory_route[12][2] * za - theory_route[12][0] * xc,
+             (L13 - L13_theory) * theta13z - zz - theory_route[12][1] * ya + theory_route[12][0] * xb]
 
         # 解，残差平方和，秩，奇异值
         lst_result, residuals, rank, s = np.linalg.lstsq(A, B, rcond=None)
-        xy, xz, yx, yz, zx, zy, xa, yb = lst_result
+        # xy, xz, yx, yz, zx, zy, xa, yb = lst_result
+        xy, xz, yx, yz, zx, zy, _b, _a = lst_result
+        xa = 0
+        yb = 0
+        if lx != 0:
+            xx = xx * axis_range[0] / lx
+        if ly != 0:
+            yy = yy * axis_range[1] / ly
+        if lz != 0:
+            zz = zz * axis_range[2] / lz
+        xy = xy / axis_range[0]
+        xz = xz / axis_range[0]
+        yx = yx / axis_range[1]
+        yz = yz / axis_range[1]
+        zx = zx / axis_range[2]
+        zy = zy / axis_range[2]
         error_ret = [xx, yy, zz, xy, xz, yx, yz, zx, zy, xa, xb, xc, ya, yb, yc, za, zb, 0]
         return error_ret
