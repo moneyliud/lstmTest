@@ -17,13 +17,15 @@ _a = 4
 
 
 def _randomTrans(p=TRANS_PRECISION):
-    return random() * p
+    return (1 + (random() * 2 - 1) * 0.1) * p
     # return 0.8 * p
     # return p
 
 
 def _randomRotate(p=ROTATE_PRECISION):
-    return (random() * 2 - 1) * p
+    return (1 + (random() * 2 - 1) * 0.001) * p
+    # return (random() * 2 - 1) * p
+
     # a = 1
     # if random() < 0.5:
     #     a = -1
