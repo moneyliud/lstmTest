@@ -6,7 +6,7 @@ from random import random
 
 TRANS_PRECISION = 0.01
 SP_PRECISION = 0.005
-ROTATE_PRECISION = 0.00001
+ROTATE_PRECISION = 0.000001
 VERTICAL_PRECISION = 0.000001
 
 _x = 0
@@ -23,7 +23,7 @@ def _randomTrans(p=TRANS_PRECISION):
 
 
 def _randomRotate(p=ROTATE_PRECISION):
-    return (1 + (random() * 2 - 1) * 0.001) * p
+    return (1 + (random() * 2 - 1) * 0.1) * p
     # return (random() * 2 - 1) * p
 
     # a = 1
@@ -145,17 +145,18 @@ class MotionCalculator:
         # e_v_ca = MotionMatrix().rotateY(rd(vp), rtype)
 
         # 实际精度
+        # self.__pActual = MotionMatrix().transX(x) * e_static_x * e_v_xy * \
+        #                  MotionMatrix().transY(y) * e_static_y * e_v_zx * e_v_zy * \
+        #                  MotionMatrix().transZ(z) * e_static_z * e_v_cx * e_v_cy * \
+        #                  MotionMatrix().rotateZ(c) * e_static_c * self.__BMat * e_v_cb * e_v_ca * \
+        #                  MotionMatrix().rotateX(a) * e_static_a * MotionMatrix()  # * e_static_sp
+
         self.__pActual = MotionMatrix().transX(x) * e_static_x * e_v_xy * \
                          MotionMatrix().transY(y) * e_static_y * e_v_zx * e_v_zy * \
                          MotionMatrix().transZ(z) * e_static_z * e_v_cx * e_v_cy * \
                          MotionMatrix().rotateZ(c) * e_static_c * self.__BMat * e_v_cb * e_v_ca * \
-                         MotionMatrix().rotateX(a) * e_static_a * MotionMatrix() * e_static_sp
+                         MotionMatrix().rotateX(a) * e_static_a * MotionMatrix()  # * e_static_sp
 
-        # self.__pActual = MotionMatrix().transX(x) * e_static_x * e_v_xy * \
-        #                  MotionMatrix().transY(y) * e_static_y * e_v_zx * e_v_zy * \
-        #                  MotionMatrix().transZ(z) * e_static_z * e_v_cx * e_v_cy * \
-        #                  MotionMatrix().rotateZ(c) * e_static_c * e_v_cb * e_v_ca * \
-        #                  MotionMatrix().rotateX(a) * e_static_a * MotionMatrix() * e_static_sp
         self.__pActual = self.__pActual * self.__LMat
         # print((MotionMatrix().rotateX(c)).matrix)
         # 误差

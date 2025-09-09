@@ -74,7 +74,7 @@ class TFMPrecision:
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         # 设置损失函数
         loss_func = nn.L1Loss()
-        motion_los = MotionLoss(self.magnification, self.axis_range, device=self.device)
+        motion_los = MotionLoss(self.magnification, self.axis_range, device=self.device, L=0)
         # 保存模型文件
         torch.save(self.model, self.model_file_name + "model.pt")
         best_loss = None

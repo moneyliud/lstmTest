@@ -7,10 +7,11 @@ from plot.resultPlot import array_to_precession_input
 
 
 class MotionLoss(nn.Module):
-    def __init__(self, magnification, axis_range, device):
+    def __init__(self, magnification, axis_range, L, device):
         super(MotionLoss, self).__init__()
         self.magnification = magnification
         self.axis_range = axis_range
+        self.L = L
         MotionMatrixTensor.device = device
 
     def forward(self, inputs, targets):
@@ -28,7 +29,7 @@ class MotionLoss(nn.Module):
                                         straightness=straightness / self.magnification[1],
                                         angleError=angle / self.magnification[2])
                 calculator.setBiasACY(0)
-                calculator.setL(0)
+                calculator.setL(self.L)
                 error, m1, m2, m3, error_pjct, x_act, y_act, z_act = calculator.calculate(
                     targets[i][k][4] / self.magnification[4],
                     targets[i][k][5] / self.magnification[4],

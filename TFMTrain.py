@@ -5,12 +5,15 @@ from transformer.TFMPrecision import TFMPrecision
 import numpy as np
 from plot.resultPlot import *
 import random
+import time
 
 # transformer网络训练模型
 if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(device)
     sample_len = 0
+    # 刀长
+    L = 0
     # 各轴定位精度
     # precision = [0.1, 0.15, 0.2, 0.25, 0.3]
     # loc_pre = [0.0, -0.0, 0.0, 0, 0]
@@ -22,13 +25,13 @@ if __name__ == '__main__':
     # 角度偏差
     angleError = [[0.00003, -0.00002, 0.00002], [0.00004, -0.00002, 0.00002], [-0.000024, 0.00005, 0.000031]]
     # angleError = [[0.03, 0.02, 0.02], [0.04, 0.02, 0.02], [0.024, 0.05, 0.031]]
-    # angleError = [[0, 0], [0, 0], [0, 0]]
+    # angleError = [[0., -0., 0.], [0.00004, -0.00002, 0.00002], [-0.0, 0.0, 0]]
     # 垂直度偏差
     # verticalPre = [0.00001, 0.00002, 0.00001, 0., 0., 0., 0.]
     # verticalPre = [0.0, 0.0, 0.0, 0., 0., 0., 0.]
     precision = [loc_pre, straightness, angleError]
     # 精度放大倍率，行程缩小倍率
-    magnification = [5, 100000, 100000, 10000, 0.0001]
+    magnification = [5, 10000, 10000, 10000, 0.0001]
     # magnification = [1, 1, 100000, 10000, 0.0001]
     # 各轴运动行程
     axis_range = [2000., 2000., 2000., 180., 180.]
@@ -44,7 +47,7 @@ if __name__ == '__main__':
     # 多少组四线路径
     route_len = 10
     # 最大迭代次数
-    max_epochs = 200
+    max_epochs = 100
     # 每批数据数量
     batch_size = 5
     load_best = True
@@ -55,36 +58,54 @@ if __name__ == '__main__':
     test_error_param = [[5.192216764043185, 0.2617623586880524, 0.7588709747758215],
                         [-1.4290295470882306, -4.547730223217397, 0.4450699781137264],
                         [-3.9988284165462975, -4.695433768922194, 0.5694013306487599],
-                        [5.797518076409893, -1.677077773142488, 0.2943403735099307],
-                        [-2.7230039086054374, -0.3210501483310497, 0.9520080988055777],
-                        [0.29041837810345106, -4.408891321092849, 0.746581009165349],
-                        [-4.6072399701975915, 5.777708678994299, 0.2128682111676471],
-                        [0.199459930106195, 5.219512134667823, 0.3650560484759472],
-                        [-4.015008944027057, -4.987407252634625, 0.7271152856238464],
-                        [-0.3010420040739392, -1.7338629273112747, 0.7887697444979137],
-                        [-2.6886757782153117, -1.3602215246889653, 0.7504783552791788],
-                        [-1.0347941535390592, 4.868790021853812, 0.36076933713507364],
-                        [-4.100375491051398, 2.990065915463194, 0.6231219635141084],
-                        [-0.4667005234813961, 1.1625127293042012, 0.5680719997341827],
-                        [1.0461739313853164, 0.7954077689276728, 0.08202414377159173],
-                        [-3.217261691105591, 0.06415096695995937, 0.6182923489750511],
-                        [-3.705285190345603, -5.074995507147135, 0.49576772566349103],
-                        [3.5245861908817053, -5.777751854551074, 0.6649989686033323]]
+                        [1.178956203443989e-05, 4.059362224365455e-06, 0.4518755534305855],
+                        [-2.271810302613115e-05, 3.786735616103811e-05, 0.26239433992585426],
+                        [-2.780283293819153e-05, 1.4505684959253678e-05, 0.8432095919877094],
+                        [-6.095482930554621e-06, -1.92134835733238e-05, 0.6519152919184402],
+                        [8.496095888274791e-06, 1.0077434424164404e-05, 0.12849043981522945],
+                        [-3.77811841379065e-06, 5.517291154461439e-06, 0.4050594493584998],
+                        [2.7011455515135813e-05, -5.678518859535065e-06, 0.5647512851104622],
+                        [-5.475691078948082e-05, 7.556854941686433e-06, 0.35947258525400694],
+                        [-5.195590703160342e-05, -2.3103969855119255e-05, 0.11841425174599007],
+                        [-9.049644571924924e-06, -2.2489940539324337e-06, 0.6569198047733425],
+                        [6.209692195181183e-06, -8.885903407728193e-06, 0.3437838711835959],
+                        [-3.106069213627105e-05, 1.9967158454913738e-05, 0.45128984619758494],
+                        [4.6047742666062404e-05, 5.874469697778904e-05, 0.671675637294559],
+                        [-9.954057869579832e-06, -4.1005069370360806e-05, 0.3858047573349588],
+                        [-5.43119013493178e-05, 4.6025618105172806e-05, 0.3705850310592902]]
+
+    k = [[1.178956203443989e-05, 4.059362224365455e-06, 0.4518755534305855],
+         [-2.271810302613115e-05, 3.786735616103811e-05, 0.26239433992585426],
+         [-2.780283293819153e-05, 1.4505684959253678e-05, 0.8432095919877094],
+         [-6.095482930554621e-06, -1.92134835733238e-05, 0.6519152919184402],
+         [8.496095888274791e-06, 1.0077434424164404e-05, 0.12849043981522945],
+         [-3.77811841379065e-06, 5.517291154461439e-06, 0.9050594493584998],
+         [2.7011455515135813e-05, -5.678518859535065e-06, 0.5647512851104622],
+         [-5.475691078948082e-05, 7.556854941686433e-06, 0.35947258525400694],
+         [-5.195590703160342e-05, -2.3103969855119255e-05, 0.11841425174599007],
+         [-9.049644571924924e-06, -2.2489940539324337e-06, 0.8569198047733425],
+         [6.209692195181183e-06, -8.885903407728193e-06, 0.3437838711835959],
+         [-3.106069213627105e-05, 1.9967158454913738e-05, 0.45128984619758494],
+         [4.6047742666062404e-05, 5.874469697778904e-05, 0.671675637294559],
+         [-9.954057869579832e-06, -4.1005069370360806e-05, 0.3858047573349588],
+         [-5.43119013493178e-05, 4.6025618105172806e-05, 0.3705850310592902]]
 
     route_data13, theory_route_data13, solve_result13, precision_target13 = motion.motionDataMoc.generateData13Line(
         data_len, sample_len, precision, axis_range=axis_range, pre_magnification=magnification,
-        error_param=test_error_param)
+        error_param=test_error_param, L=L)
     data_x, data_y = motion.motionDataMoc.generateDataAll(data_len, route_len, sample_len, precision, axis_range,
-                                                          magnification, error_param=test_error_param)
-    test_x, test_y, _tr = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision, route=test_route,
-                                                               axis_range=axis_range, pre_magnification=magnification,
-                                                               error_param=test_error_param)
+                                                          magnification, error_param=test_error_param, L=L)
+    test_x, test_y, test_theory_route = motion.motionDataMoc.generateDataCNN(data_len, sample_len, precision,
+                                                                             route=test_route,
+                                                                             axis_range=axis_range,
+                                                                             pre_magnification=magnification,
+                                                                             error_param=test_error_param, L=L)
     test_x = np.array(test_x)
     test_y = np.array(test_y)
 
     # 画出图形
-    plot_cnn_result(data_x.reshape(-1, data_x.shape[-1]), data_y.reshape(-1, data_y.shape[-1]), None, test_x,
-                    test_y, solve_result13, label, axis_range, magnification, dir_path="image13Line")
+    # plot_cnn_result(data_x.reshape(-1, data_x.shape[-1]), data_y.reshape(-1, data_y.shape[-1]), None, test_x,
+    #                 test_y, solve_result13, label, axis_range, magnification, dir_path="image13Line")
 
     model_path = None
     weight_path = None
@@ -116,18 +137,38 @@ if __name__ == '__main__':
     sample_x = np.transpose(sample_x, (1, 0, 2))
     sample_x = sample_x.reshape(data_len, len(route) * sample_x.shape[-1])
     # 预测整个机床的18项误差
+    start_time = time.time()
     tensor_sample_x = torch.tensor(sample_x.tolist(), dtype=torch.double, device=device).unsqueeze(0)
     precision_grid = model.model(tensor_sample_x, mask).detach().cpu().numpy()
+    elapsed_time = time.time() - start_time
+    print(f"Transformer法运行时间: {elapsed_time:.6f} 秒")
     precision_grid = precision_grid.reshape(-1, precision_grid.shape[-1])
-    test_x_new, test_pred_new = motion.motionDataMoc.generate_pred_by_grid(precision_grid, data_len, sample_len,
-                                                                           route=test_route,
-                                                                           axis_range=axis_range,
-                                                                           magnification=magnification)
+    test_x_new, test_pred_new, _t = motion.motionDataMoc.generate_pred_by_grid(precision_grid, data_len, sample_len,
+                                                                               route=test_route,
+                                                                               axis_range=axis_range,
+                                                                               magnification=magnification)
+    pred_by_comp_all = []
 
+    route_comp = [[[0, 0, 0], [1, 0, 0]], [[0, 0, 0], [0, 1, 0]], [[0, 0, 0], [0, 0, 1]]]
+    for i in range(len(route_comp)):
+        comp_route_x, comp_pred, comp_theory_route = motion.motionDataMoc.generate_pred_by_grid(precision_grid,
+                                                                                                data_len, sample_len,
+                                                                                                route=route_comp[i],
+                                                                                                axis_range=axis_range,
+                                                                                                magnification=magnification)
+        comp = motion.motionDataMoc.generate_composition_value_by_grid(np.array(comp_pred), np.array(comp_route_x),
+                                                                       route_comp[i],
+                                                                       data_len,
+                                                                       axis_range, magnification)
+        pred_by_comp_all.append(comp)
+    pred_by_comp_all = np.array(pred_by_comp_all)
+    pred_comp = motion.motionDataMoc.generate_composition_value_by_all_comp(test_theory_route, pred_by_comp_all,
+                                                                            data_len, axis_range, magnification)
     # 转为numpy对象
     train_pred = np.array(train_pred)
     test_pred = np.array(test_pred_new)
     avg = np.average(np.abs(test_pred - test_y))
     # 画出图形
     plot_cnn_result(data_x.reshape(-1, data_x.shape[-1]), data_y.reshape(-1, data_y.shape[-1]), train_pred, test_x,
-                    test_y, test_pred, label, axis_range, magnification)
+                    test_y, test_pred, label, axis_range, magnification, L=L, pre_com_val=pred_comp,
+                    theory_route=test_theory_route)

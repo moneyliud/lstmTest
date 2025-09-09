@@ -6,6 +6,7 @@ import random
 import torch
 from motion.Method13LineSolver import Method13LineSolver
 import motion
+import time
 
 
 # 增加随机误差
@@ -16,6 +17,17 @@ def add_error(a, rate=0.008):
 # 线性误差模拟函数
 def locFunc(value, b, a=0.5):
     return add_error(value * a / 600 + b)
+
+
+# 线性误差模拟函数2
+def locFunc2(value, tar, a1=3.0, a2=-4.0, thres=0.5, rate=0.002):
+    if tar == 0:
+        return add_error(tar, rate)
+    alpha = (thres * a1 - tar) / (thres - 1)
+    b = tar - alpha
+    if value < thres:
+        return add_error(a1 * value, rate)
+    return add_error(alpha * value + b, rate)
 
 
 # 线性误差模拟函数1
@@ -49,7 +61,7 @@ def generateDataLSTM(data_len, sample_len, precision, next_step=0, route=None):
 # 生成13线法的辨识结果数据
 def generateData13Line(data_len, sample_len, precision, next_step=0, axis_range=None,
                        pre_magnification=None,
-                       points=None, error_param=None):
+                       points=None, error_param=None, L=0):
     route = [
         # X轴第一线，L1
         [[0, 0, 0], [1, 0, 0]],
@@ -86,7 +98,7 @@ def generateData13Line(data_len, sample_len, precision, next_step=0, axis_range=
     for i in range(len(route)):
         data_x, data_y, theory_route = generateData(data_len, sample_len, precision, next_step, route[i], axis_range,
                                                     pre_magnification,
-                                                    points, error_param)
+                                                    points, error_param, L)
         data_x = np.array(data_x)
         if route_data is None:
             route_data = np.expand_dims(data_x[:, 1:4], axis=1)
@@ -98,12 +110,15 @@ def generateData13Line(data_len, sample_len, precision, next_step=0, axis_range=
         if i == len(route) - 1:
             precision_target = data_y
 
+    start_time = time.time()
     for i in range(len(route_data)):
         tmp = Method13LineSolver.solve(route_data[i], theory_route_data[i], axis_range)
         tmp[0:3] = [x * pre_magnification[0] for x in tmp[0:3]]
         tmp[3:9] = [x * pre_magnification[1] for x in tmp[3:9]]
         tmp[9:18] = [x * pre_magnification[2] for x in tmp[9:18]]
         solve_result.append(tmp)
+    elapsed_time = time.time() - start_time
+    print(f"13线法运行时间: {elapsed_time:.6f} 秒")
     precision_target = np.array(precision_target)
     solve_result = np.array(solve_result)
     return route_data, theory_route_data, solve_result, precision_target
@@ -111,14 +126,14 @@ def generateData13Line(data_len, sample_len, precision, next_step=0, axis_range=
 
 # 生成CNN所需训练数据
 def generateDataCNN(data_len, sample_len, precision, next_step=0, route=None, axis_range=None, pre_magnification=None,
-                    points=None, error_param=None):
+                    points=None, error_param=None, L=0):
     data_x, data_y, theory_route = generateData(data_len, sample_len, precision, next_step, route, axis_range,
                                                 pre_magnification,
-                                                points, error_param)
+                                                points, error_param, L)
     return data_x, data_y, theory_route
 
 
-def generateDataAll(data_len, route_len, sample_len, precision, axis_range, magnification, error_param=None):
+def generateDataAll(data_len, route_len, sample_len, precision, axis_range, magnification, error_param=None, L=0):
     # 运动路线，为直线运动的终点坐标，取0-1，表示各轴的行程范围
     route = [[[0, 0, 0], [1, 1, 1]],
              [[0, 0, 0], [1, 0, 1]],
@@ -138,7 +153,11 @@ def generateDataAll(data_len, route_len, sample_len, precision, axis_range, magn
         if error_param is None:
             error_params_random = [[(1 if random.random() - 0.5 > 0 else -1) * random.random() * 6,
                                     (1 if random.random() - 0.5 > 0 else -1) * random.random() * 6, random.random()]
-                                   for n in range(18)]
+                                   for n in range(3)]
+            tmp2 = [[(1 if random.random() - 0.5 > 0 else -1) * random.random() * 0.00006,
+                     (1 if random.random() - 0.5 > 0 else -1) * random.random() * 0.00006, random.random()]
+                    for n in range(15)]
+            error_params_random.extend(tmp2)
             # error_params_random = [[random.random() * 6,
             #                         random.random() * 6, random.random()]
             #                        for n in range(18)]
@@ -151,7 +170,7 @@ def generateDataAll(data_len, route_len, sample_len, precision, axis_range, magn
                                                                               route=route[i],
                                                                               axis_range=axis_range,
                                                                               pre_magnification=magnification,
-                                                                              error_param=error_params_random)
+                                                                              error_param=error_params_random, L=L)
             tmp_data_x.append(tmp_x)
             if i == 0:
                 target_y = tmp_y
@@ -169,7 +188,7 @@ def generateDataAll(data_len, route_len, sample_len, precision, axis_range, magn
 
 # 生成训练数据集，参数：[数据长度，lstm采样长度，设备精度数组，预测的下一组数据跳过的步数，机床运行路径]
 def generateData(data_len, sample_len, precision, next_step=0, route=None, axis_range=None, magnification=None,
-                 points=None, error_param=None):
+                 points=None, error_param=None, L=0):
     # 机床运动计算模型
     calculator = MotionCalculator()
     calculator.setAxisRange(axis_range)
@@ -222,16 +241,16 @@ def generateData(data_len, sample_len, precision, next_step=0, route=None, axis_
         for k in range(3):
             start = k * 2 + 3
             in_straightness[k] = [
-                locFunc1(pos[k], straightness[k][0], a1=error_param[start][0], a2=error_param[start][1],
+                locFunc2(pos[k], straightness[k][0], a1=error_param[start][0], a2=error_param[start][1],
                          thres=error_param[start][2], rate=0.0000002),
-                locFunc1(pos[k], straightness[k][1], a1=error_param[start + 1][0], a2=error_param[start + 1][1],
+                locFunc2(pos[k], straightness[k][1], a1=error_param[start + 1][0], a2=error_param[start + 1][1],
                          thres=error_param[start + 1][2], rate=0.0000002)]
         index = 3 * 2 + 3
         in_angle_error = [[0, 0, 0] for i in range(3)]
         # 9项各轴的角度误差
         for k in range(3):
             for t in range(3):
-                in_angle_error[k][t] = locFunc1(x_rate, angle_error[k][t], a1=error_param[index][0],
+                in_angle_error[k][t] = locFunc2(pos[k], angle_error[k][t], a1=error_param[index][0],
                                                 a2=error_param[index][1], thres=error_param[index][2], rate=0.0000001)
                 index = index + 1
         # in_vertical_pre = [locFunc1(i, vertical_pre[0], a1=370, a2=300, thres=50, rate=0.000002),
@@ -241,7 +260,7 @@ def generateData(data_len, sample_len, precision, next_step=0, route=None, axis_
         # 设置定位精度
         calculator.setPrecision(pLoc=in_loc, straightness=in_straightness, angleError=in_angle_error)
         calculator.setBiasACY(0)
-        calculator.setL(0)
+        calculator.setL(L)
         error, m1, m2, m3, error_pjct, x_act, y_act, z_act = calculator.calculate(x, y, z, 0., 0.)
         # tmp_data_x.append([error, m1, m2, m3, x, y, z])
         point_dis = math.sqrt(x ** 2 + y ** 2 + z ** 2) * magnification[4]
@@ -264,6 +283,7 @@ def generate_pred_by_grid(precision_grid, data_len, sample_len, next_step=0, rou
     interval = []
     tmp_data_x = []
     tmp_data_y = []
+    tmp_theory_route = []
 
     for i in range(len(axis_range)):
         interval.append(axis_range[i] / (data_len + sample_len + next_step))
@@ -285,6 +305,7 @@ def generate_pred_by_grid(precision_grid, data_len, sample_len, next_step=0, rou
         tmp_data_x.append([0, 0, 0, 0, x * magnification[4], y * magnification[4], z * magnification[4]])
         # "x", "y", "z", "S_XXY", "S_XXZ", "S_YYZ", "S_YYX", "S_ZZY", "S_ZZX",
         # "A_XA", "A_XB", "A_XC", "A_YA","A_YB", "A_YC", "A_ZA", "A_ZB", "A_ZC"
+        tmp_theory_route.append([x, y, z])
         loc = [precision_grid[x_idx][0], precision_grid[y_idx][1], precision_grid[z_idx][2]]
         straightness = [precision_grid[x_idx][3], precision_grid[x_idx][4],
                         precision_grid[y_idx][5], precision_grid[y_idx][6],
@@ -297,4 +318,101 @@ def generate_pred_by_grid(precision_grid, data_len, sample_len, next_step=0, rou
              np.array(straightness).reshape(-1),
              np.array(angle_error).reshape(-1)), 0, None)
         tmp_data_y.append(target.tolist())
-    return tmp_data_x, tmp_data_y
+    return tmp_data_x, tmp_data_y, tmp_theory_route
+
+
+def generate_composition_value_by_grid(precision_grid, test_x, route, data_len, axis_range, magnification, L=0):
+    # 补偿矩阵计算
+    calculator = MotionCalculator()
+    calculator.setBiasACY(0)
+    calculator.setL(L)
+    calculator.setAxisRange(axis_range)
+    pre_len = 12
+    composition = np.zeros((test_x.shape[0], pre_len))
+    for i in range(precision_grid.shape[0]):
+        pred_loc, pred_straightness, pred_angle = array_to_precession_input(precision_grid[i],
+                                                                            magnification)
+        calculator.setPrecision(pLoc=pred_loc, straightness=pred_straightness, angleError=pred_angle)
+        tmp_pos = test_x[i][4:7]
+        pre = calculator.calculate(tmp_pos[0] / magnification[4], tmp_pos[1] / magnification[4],
+                                   tmp_pos[2] / magnification[4], 0., 0.)
+        for k in range(3):
+            composition[i][k] = (pre[k + 5] - tmp_pos[k])
+        for k in range(9):
+            ae = pred_angle.reshape(-1)
+            composition[i][k + 3] = ae[k]
+    return composition
+    # interval = []
+    # for i in range(len(axis_range)):
+    #     interval.append(axis_range[i] / data_len)
+    # total_len = data_len
+    # x_s, y_s, z_s = route[0][0], route[0][1], route[0][2]
+    # dir_x, dir_y, dir_z = route[1][0] - route[0][0], route[1][1] - route[0][1], route[1][2] - route[0][2]
+    # ret_array = []
+    # pre_com = []
+    # if route is None:
+    #     return None
+    # for i in range(total_len):
+    #     x, y, z, x_idx, y_idx, z_idx = 0, 0, 0, 0, 0, 0
+    #     x = i * interval[0]
+    #     y = i * interval[1]
+    #     z = i * interval[2]
+    #     x = x_s * axis_range[0] + x * dir_x
+    #     y = y_s * axis_range[1] + y * dir_y
+    #     z = z_s * axis_range[2] + z * dir_z
+    #     x_idx = int(x / interval[0])
+    #     x_e = x / interval[0] - x_idx
+    #     y_idx = int(y / interval[1])
+    #     y_e = y / interval[1] - y_idx
+    #     z_idx = int(z / interval[2])
+    #     z_e = z / interval[2] - z_idx
+    #     pre = [linear_composition(x_idx, x_e, composition[0]), linear_composition(y_idx, y_e, composition[1]),
+    #            linear_composition(z_idx, z_e, composition[2])]
+    #     pre_com.append(pre)
+    # return np.array(pre_com)
+
+
+def generate_composition_value_by_all_comp(test_theory_route, pred_by_comp_all, data_len, axis_range, magnification):
+    interval = []
+    comp_ret = []
+    for i in range(len(axis_range)):
+        interval.append(axis_range[i] / data_len)
+    for i in range(len(test_theory_route)):
+        x = test_theory_route[i][0]
+        y = test_theory_route[i][1]
+        z = test_theory_route[i][2]
+        x_idx_d = x / interval[0]
+        x_idx = int(x_idx_d)
+        x_e = x_idx_d - x_idx
+        y_idx_d = y / interval[1]
+        y_idx = int(y_idx_d)
+        y_e = y_idx_d - y_idx
+        z_idx_d = z / interval[2]
+        z_idx = int(z_idx_d)
+        z_e = z_idx_d - z_idx
+        comp_x = linear_composition(x_idx, x_e, pred_by_comp_all[0][:, 0]) \
+                 + linear_composition(y_idx, y_e, pred_by_comp_all[1][:, 0]) \
+                 + linear_composition(z_idx, z_e, pred_by_comp_all[2][:, 0])
+        x_sub1 = + z * linear_composition(x_idx, x_e, pred_by_comp_all[0][:, 4])
+        x_sub2 = + z * linear_composition(y_idx, y_e, pred_by_comp_all[1][:, 7])
+        x_sub3 = - y * linear_composition(x_idx, x_e, pred_by_comp_all[0][:, 5])
+        comp_x = 1 * comp_x + 1 * x_sub1 + 1 * x_sub2 + 1 * x_sub3
+        comp_y = linear_composition(x_idx, x_e, pred_by_comp_all[0][:, 1]) \
+                 + linear_composition(y_idx, y_e, pred_by_comp_all[1][:, 1])
+        # + linear_composition(z_idx, z_e, pred_by_comp_all[2][:, 1])
+        y_sub1 = - z * linear_composition(x_idx, x_e, pred_by_comp_all[0][:, 3])
+        y_sub2 = - z * linear_composition(y_idx, y_e, pred_by_comp_all[1][:, 6])
+        comp_y = comp_y + 1 * y_sub1 + 1 * y_sub2
+        comp_z = linear_composition(x_idx, x_e, pred_by_comp_all[0][:, 2]) \
+                 + linear_composition(y_idx, y_e, pred_by_comp_all[1][:, 2]) \
+                 + linear_composition(z_idx, z_e, pred_by_comp_all[2][:, 2])
+        z_sub1 = y * linear_composition(x_idx, x_e, pred_by_comp_all[0][:, 3])
+        comp_z = comp_z + 1 * z_sub1
+        comp_ret.append([comp_x, comp_y, comp_z])
+    return np.array(comp_ret)
+
+
+def linear_composition(idx, e, composition):
+    if idx < len(composition) - 1:
+        return (composition[idx + 1] - composition[idx]) * e + composition[idx]
+    return composition[idx]
