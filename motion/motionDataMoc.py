@@ -30,6 +30,10 @@ def locFunc2(value, tar, a1=3.0, a2=-4.0, thres=0.5, rate=0.002):
     return add_error(alpha * value + b, rate)
 
 
+def locFunc3(value, tar, a1=3.0, a2=-4.0, thres=0.5, rate=0.002):
+    return add_error(tar, rate)
+
+
 # 线性误差模拟函数1
 def locFunc1(value, b, a1=3.0, a2=-4.0, thres=0.5, rate=0.002):
     b2 = thres * b * a1 + b - thres * b * a2
@@ -240,11 +244,16 @@ def generateData(data_len, sample_len, precision, next_step=0, route=None, axis_
         # 6项各轴的直线度误差
         for k in range(3):
             start = k * 2 + 3
+            # in_straightness[k] = [
+            #     locFunc2(pos[k], straightness[k][0], a1=error_param[start][0], a2=error_param[start][1],
+            #              thres=error_param[start][2], rate=0.0000002),
+            #     locFunc2(pos[k], straightness[k][1], a1=error_param[start + 1][0], a2=error_param[start + 1][1],
+            #              thres=error_param[start + 1][2], rate=0.0000002)]
             in_straightness[k] = [
-                locFunc2(pos[k], straightness[k][0], a1=error_param[start][0], a2=error_param[start][1],
-                         thres=error_param[start][2], rate=0.0000002),
-                locFunc2(pos[k], straightness[k][1], a1=error_param[start + 1][0], a2=error_param[start + 1][1],
-                         thres=error_param[start + 1][2], rate=0.0000002)]
+                locFunc3(pos[k], straightness[k][0], a1=error_param[start][0], a2=error_param[start][1],
+                         thres=error_param[start][2], rate=0.000002),
+                locFunc3(pos[k], straightness[k][1], a1=error_param[start + 1][0], a2=error_param[start + 1][1],
+                         thres=error_param[start + 1][2], rate=0.000002)]
         index = 3 * 2 + 3
         in_angle_error = [[0, 0, 0] for i in range(3)]
         # 9项各轴的角度误差
