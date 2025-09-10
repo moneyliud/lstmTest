@@ -34,6 +34,14 @@ def locFunc3(value, tar, a1=3.0, a2=-4.0, thres=0.5, rate=0.002):
     return add_error(tar, rate)
 
 
+def locFunc4(value, x, y, rate=0.002, mid=0):
+    tar = 0
+    for i in range(len(x)):
+        if value > x[i]:
+            tar = y[i] + (value - x[i]) / (x[i + 1] - x[i]) * (y[i + 1] - y[i])
+    return add_error(tar, rate) + mid
+
+
 # 线性误差模拟函数1
 def locFunc1(value, b, a1=3.0, a2=-4.0, thres=0.5, rate=0.002):
     b2 = thres * b * a1 + b - thres * b * a2
@@ -250,10 +258,9 @@ def generateData(data_len, sample_len, precision, next_step=0, route=None, axis_
             #     locFunc2(pos[k], straightness[k][1], a1=error_param[start + 1][0], a2=error_param[start + 1][1],
             #              thres=error_param[start + 1][2], rate=0.0000002)]
             in_straightness[k] = [
-                locFunc3(pos[k], straightness[k][0], a1=error_param[start][0], a2=error_param[start][1],
-                         thres=error_param[start][2], rate=0.000002),
-                locFunc3(pos[k], straightness[k][1], a1=error_param[start + 1][0], a2=error_param[start + 1][1],
-                         thres=error_param[start + 1][2], rate=0.000002)]
+                locFunc4(pos[k], error_param[start][0], error_param[start][1], rate=0.00000024, mid=straightness[k][0]),
+                locFunc4(pos[k], error_param[start + 1][0], error_param[start + 1][1], rate=0.00000024,
+                         mid=straightness[k][1])]
         index = 3 * 2 + 3
         in_angle_error = [[0, 0, 0] for i in range(3)]
         # 9项各轴的角度误差
@@ -425,3 +432,13 @@ def linear_composition(idx, e, composition):
     if idx < len(composition) - 1:
         return (composition[idx + 1] - composition[idx]) * e + composition[idx]
     return composition[idx]
+
+
+def gen_wave_error(max_v, st=4, ed=10):
+    total = int(random.random() * (ed - st) + st)
+    y = [max_v * 2 * random.random() - max_v for i in range(total)]
+    itv = 1 / total
+    x = [itv * i + ((itv / 3) * random.random() - itv / 6) for i in range(total)]
+    x[0] = 0
+    x[len(x) - 1] = 1
+    return [x, y]
