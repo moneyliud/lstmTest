@@ -30,7 +30,7 @@ if __name__ == '__main__':
     # verticalPre = [0.0, 0.0, 0.0, 0., 0., 0., 0.]
     precision = [loc_pre, straightness, angleError]
     # 精度放大倍率，行程缩小倍率
-    magnification = [5, 30000, 10000, 10000, 0.0001]
+    magnification = [5, 10000, 10000, 10000, 0.0001]
     # magnification = [1, 1, 100000, 10000, 0.0001]
     # 各轴运动行程
     axis_range = [2000., 2000., 2000., 180., 180.]
@@ -42,8 +42,8 @@ if __name__ == '__main__':
              "$\delta \\alpha(\mathit{y})$", "$\delta \\beta(\mathit{y})$", "$\delta \\gamma(\mathit{y})$",
              "$\delta \\alpha(\mathit{z})$", "$\delta \\beta(\mathit{z})$", "$\delta \\gamma(\mathit{z})$"]
     # 运动路线，为直线运动的终点坐标，取0-1，表示各轴的行程范围
-    route = [[[0, 0, 0], [1, 1, 1]], [[0, 0, 0], [1, 1, 1]],
-             [[0, 0, 0], [1, 1, 1]], [[0, 0, 0], [1, 1, 1]]]
+    route = [[[0, 0, 0], [1, 1, 0]], [[0, 0, 0], [0, 1, 1]],
+             [[0, 0, 0], [1, 0, 1]], [[0, 0, 0], [1, 1, 1]]]
     # route = [[[0, 0, 0], [1, 1, 1]],
     #          [[0, 0, 0], [1, 0, 1]],
     #          [[0, 0, 0], [1, 1, 0]],
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     load_best = False
     # 学习率
     learning_rate = 0.0002
-    test_route = [[0, 0, 0], [0.5, 1, 1]]
+    test_route = [[0, 0, 0], [1, 1, 1]]
     test_route1 = [[0, 0, 0], [1, 0.5, 1]]
     test_route2 = [[0, 0, 0], [1, 1, 0.5]]
     test_route3 = [[0, 0, 0], [0.5, 0.5, 1]]
